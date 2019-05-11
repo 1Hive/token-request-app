@@ -28,6 +28,6 @@ We need to start building the app.
 
 We need to decide what the base rate of exchange is for the DAO's native token (HONEY) because there is no automatic price discovery like there would be with a bonding curve or open market.
 
-Unknown unknowns that are not listed here
+Unknown unknowns that are not listed here ¯\\\_(ツ)\_/¯
 
 <br>
