@@ -1,7 +1,7 @@
 # Token Request App
 
 An Aragon app that allows someone to request native tokens from a DAO in exchange for another token (ANT/ETH/DAI).
-- [originally proposed by @lkngtn](https://github.com/1Hive/ideas/issues/3) in the [Ideas](https://github.com/1Hive/ideas) repo, now graduating from an idea into a full project 🎓
+- [originally proposed by @lkngtn](https://github.com/1Hive/ideas/issues/3) in the [ideas](https://github.com/1Hive/ideas) repo, now graduating from an idea into a full project 🎓
 
 <br>
 
