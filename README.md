@@ -7,8 +7,8 @@ An Aragon app that allows someone to request native tokens from a DAO in exchang
 ## What is it?
 
 The Token Request App would enable anyone to create a vote to mint tokens for themselves
-- it should allow users to include a payment (eth or tokens) that is returned to them if they are rejected, or put in the DAO's vault if the request is approved
-- should allow the DAO to configure a minimum payment required
+- it should allow users to request a DAO's native tokens in exchange for a payment (eth or tokens). The payment is returned to them if they are rejected, or put in the DAO's vault if the request is approved.
+- it should allow the DAO to configure a minimum payment required
 
 <br>
 
