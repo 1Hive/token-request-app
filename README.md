@@ -1,34 +1,45 @@
-# Token Request App
+# Token Request <img align="right" src="https://github.com/1Hive/website/blob/master/website/static/img/bee.png" height="80px" />
 
-An Aragon app that allows someone to request native tokens from a DAO in exchange for another token (ANT/ETH/DAI).
-- [originally proposed by @lkngtn](https://github.com/1Hive/ideas/issues/3) in the [ideas](https://github.com/1Hive/ideas) repo, now graduating from an idea into a full project 🎓
+1Hive's Token Request app allows users to create a vote which requests an Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to to approve, if the vote is rejected the user would recieve their payment back and if it is approved the payment would be deposited in the organization's vault. 
 
-<br>
+#### 🐲 Project stage: development
 
-## What is it?
+The Redemptions app is still in development and hasn't been published to APM. If you are interested in contributing please see our open [issues](https://github.com/1hive/token-request-app/issues).
 
-The Token Request App would enable anyone to create a vote to mint tokens for themselves
-- it should allow users to request a DAO's native tokens in exchange for a payment (eth or tokens). The payment is returned to them if they are rejected, or put in the DAO's vault if the request is approved.
-- it should allow the DAO to configure a minimum payment required
+#### 🚨 Security review status: pre-audit
 
-<br>
+The code in this repo has not been audited.
 
-## What is it used for?
+## How does it work
 
-It could help formalize the process of becoming a member of a DAO in a way that would generalize well to other organizations. 
-- In the context of 1Hive, this could require potential members to first earn HONEY via tasks/allocations, then stake that HONEY to their membership request for BEEs to vote on.
+The Token Request App should be granted the `Create Votes` permission on an instance of the Aragon `Voting` app. When a user makes a request they should transfer the payment to the token request app which will hold them in escrow while the vote is created and executed. If the vote duration passes and the payment is still in the token request app, the user should be able to claim **their** tokens. If the vote passes then executing the vote should transfer the users tokens from the token request app to the organizations vault, and mint tokens from the token manager for the user.  
 
-It would allow a DAO to accept outside contributions from donors, grants, and/or projects that want to engage with a DAO's community to get stuff done.
-- In the context of 1Hive, this could allow outside orgs to support the hive in a direct way that allows them to measure the impact/result of their contributions. It also illiminates any potential drama/failure that would result from the DAO receiving funds, but not knowing what to do with them and/or investing them poorly. It also creates an interim fundraising mechanism for the MVP until we have [Apiary](https://github.com/1Hive/apiary) setup.  
+### Initialization
 
-<br>
+The token request needs to be passed the address of a `voting app` instance, the address a `token manager` instance, the address of the payment token contract, and the address of the organization's `vault`. 
 
-## What open problems need to be solved?
+### Roles
 
-We need to start building the app.
+The token request application should implement the following roles:
 
-We need to decide what the base rate of exchange is for the DAO's native token (HONEY) because there is no automatic price discovery like there would be with a bonding curve or open market.
+- Request Tokens
+- Change Vault Address
+- Change Token Manager Address
+- Change Voting Address
+- Change Payment Token 
 
-Unknown unknowns that are not listed here ¯\\\_(ツ)\_/¯
+### Interface
 
-<br>
+We do not need to provide an interface for changing parameters as this can be done by power users using the CLI. 
+
+We do need to provide an interface for requesting tokens, which would allow users to specify the amount and the associated payment.
+
+We do need to provide an interface for claiming payments when the request is rejected. 
+
+## How to run
+
+TODO:
+
+## How to deploy to an organization
+
+TODO:
