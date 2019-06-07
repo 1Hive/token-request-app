@@ -4,6 +4,8 @@ import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/apps-token-manager/contracts/TokenManager.sol";
 import "@aragon/apps-vault/contracts/Vault.sol";
 import "@aragon/apps-voting/contracts/Voting.sol";
+import "@aragon/os/contracts/common/SafeERC20.sol";
+import "@aragon/os/contracts/lib/token/ERC20.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 import "./lib/ArrayUtils.sol";
 
@@ -21,17 +23,36 @@ contract TokenRequest is AragonApp {
     string private constant ERROR_CANNOT_MINT_ZERO = "TOKENREQUEST_CANNOT_MINT_ZERO";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKENREQUEST_ETH_VALUE_MISMATCH";
     string private constant ERROR_DEPOSIT_VALUE_MISMATCH = "TOKENREQUEST_DEPOSIT_VALUE_MISMATCH";
+    string private constant ERROR_DEPOSIT_TOKEN_MISMATCH = "TOKENREQUEST_DEPOSIT_TOKEN_MISMATCH";
+    string private constant ERROR_MINT_VALUE_MISMATCH = "TOKENREQUEST_MINT_VALUE_MISMATCH";
+    string private constant ERROR_DEPOSIT_NOT_ACTIVE = "TOKENREQUEST_DEPOSIT_NOT_ACTIVE";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKENREQUEST_TOKEN_TRANSFER_REVERT";
+    string private constant ERROR_TOKEN_APPROVE_FAILED = "TOKENREQUEST_TKN_APPROVE_FAILED";
+
+     struct Request {
+        uint256 depositAmount;
+        address token;
+        uint256 mintAmount;
+        bool active;
+    }
 
     Vault public vault;
     TokenManager public tokenManager;
     Voting public voting;
 
     // In case of refound how can we know which pending refound to do?
-    mapping (address => mapping (uint256 => uint256)) internal deposits;
-    mapping (address => uint256) public depositsLengths;
+    mapping (address => mapping (uint256 => Request)) internal requests;
+    mapping (address => uint256) public requestsLengths;
 
-    event Request(address indexed receiver, address depositToken, uint256 depositAmount, uint256 mintAmount, uint256 voteId, uint256 depositId);
+    event Request(address indexed receiver, address depositToken, uint256 depositAmount, uint256 mintAmount, uint256 voteId, uint256 requestId);
+    event ApprovedRequest(
+        address indexed receiver,
+        address depositToken,
+        uint256 depositAmount,
+        uint256 mintAmount,
+        uint256 voteId,
+        uint256 requestId
+        );
 
      /**
     * @notice Initialize TokenRequest app contract
@@ -71,31 +92,45 @@ contract TokenRequest is AragonApp {
         }
 
         //Save the deposit amount into the mapping
-        uint256 depositId = depositsLengths[msg.sender]++;
-        deposits[msg.sender][depositId] = _depositAmount;
+        uint256 requestId = requestsLengths[msg.sender]++;
+        Request storage request_ = requests[msg.sender] [requestId];
+        request_.token = _depositToken;
+        request_.depositAmount = _depositAmount;
+        request_.mintAmount = _mintAmount;
+        request_.active = true;
 
         uint256 voteId = voting.newVote(_evmScript,_metadata);
-        emit Request(msg.sender, _depositToken, _depositAmount, _mintAmount, voteId, depositId);
+        emit Request(msg.sender, _depositToken, _depositAmount, _mintAmount, voteId, requestId);
 
     }
 
-    // Internal fns
     function _request(
         address _receiver,
         address _depositToken,
         uint256 _depositAmount,
-        uint256 _tokenAmount,
-        uint256 _depositId
+        uint256 _mintAmount,
+        uint256 _requestId
     )
         external
+        auth(VOTING_TOKEN_REQUEST_ROLE)
     {
 
-        if (_depositAmount > 0){
-            require(deposits[_receiver][depositId] = _depositAmount, ERROR_DEPOSIT_VALUE_MISMATCH);
-                vault.deposit(_depositToken, _depositAmount);
+        Request storage request_ = requests[_receiver][_requestId];
+        require(request_.active = true, ERROR_DEPOSIT_NOT_ACTIVE);
+        require(request_.token = _depositToken, ERROR_DEPOSIT_TOKEN_MISMATCH);
+        require(request_.depositAmount = _depositAmount, ERROR_DEPOSIT_VALUE_MISMATCH);
+        require(request_.mintAmount = _mintAmount, ERROR_MINT_VALUE_MISMATCH);
+
+        request_.active = false;
+        if (_depositToken == ETH) {
+             vault.deposit.value(_depositAmount)(ETH, _depositAmount);
         }
 
-        tokenManager.mint(_receiver, 10e18);
+        require(ERC20(_depositToken).safeApprove(vault, _depositAmount), ERROR_TOKEN_APPROVE_FAILED);
+        vault.deposit(_depositToken, _depositAmount);
+        tokenManager.mint(_receiver, _mintAmount);
+
+        emit ApprovedRequest(_receiver, _depositToken, _depositAmount, _mintAmount, voteId, requestId);
 
     }
 }
