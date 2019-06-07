@@ -20,6 +20,8 @@ contract TokenRequest is AragonApp {
     string private constant ERROR_TOKEN_NOT_CONTRACT = "TOKENREQUEST_TOKEN_NOT_CONTRACT";
     string private constant ERROR_CANNOT_MINT_ZERO = "TOKENREQUEST_CANNOT_MINT_ZERO";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKENREQUEST_ETH_VALUE_MISMATCH";
+    string private constant ERROR_DEPOSIT_VALUE_MISMATCH = "TOKENREQUEST_DEPOSIT_VALUE_MISMATCH";
+    string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKENREQUEST_TOKEN_TRANSFER_REVERT";
 
     Vault public vault;
     TokenManager public tokenManager;
@@ -29,7 +31,7 @@ contract TokenRequest is AragonApp {
     mapping (address => mapping (uint256 => uint256)) internal deposits;
     mapping (address => uint256) public depositsLengths;
 
-    event Request(address indexed receiver, address depositToken, uint256 depositAmount, uint256 mintAmount, uint256 voteId);
+    event Request(address indexed receiver, address depositToken, uint256 depositAmount, uint256 mintAmount, uint256 voteId, uint256 depositId);
 
      /**
     * @notice Initialize TokenRequest app contract
@@ -61,14 +63,19 @@ contract TokenRequest is AragonApp {
         if (_depositToken == ETH) {
             // Ensure that the ETH sent with the transaction equals the amount in the deposit
             require(msg.value == _depositAmount, ERROR_ETH_VALUE_MISMATCH);
+        } else {
+             require(
+                    ERC20(_depositToken).safeTransferFrom(msg.sender, address(this), _depositAmount),
+                    ERROR_TOKEN_TRANSFER_REVERTED
+                );
         }
 
         //Save the deposit amount into the mapping
         uint256 depositId = depositsLengths[msg.sender]++;
-        deposits[msg.sender][depositId] = msg.value;
+        deposits[msg.sender][depositId] = _depositAmount;
 
         uint256 voteId = voting.newVote(_evmScript,_metadata);
-        emit Request(msg.sender, _depositToken, _depositAmount, _mintAmount, voteId)
+        emit Request(msg.sender, _depositToken, _depositAmount, _mintAmount, voteId, depositId);
 
     }
 
@@ -77,11 +84,18 @@ contract TokenRequest is AragonApp {
         address _receiver,
         address _depositToken,
         uint256 _depositAmount,
-        uint256 _tokenAmount
+        uint256 _tokenAmount,
+        uint256 _depositId
     )
-        internal
+        external
     {
 
+        if (_depositAmount > 0){
+            require(deposits[_receiver][depositId] = _depositAmount, ERROR_DEPOSIT_VALUE_MISMATCH);
+                vault.deposit(_depositToken, _depositAmount);
+        }
+
+        tokenManager.mint(_receiver, 10e18);
 
     }
 }
