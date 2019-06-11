@@ -162,6 +162,11 @@ contract TokenRequest is AragonApp {
 
     }
 
+    /**
+    * @notice Refund request for `_receiver`
+    * @param _receiver Receiver address
+    * @param _requestId Request Id to be refunded
+    */
     function refund(address _receiver, uint256 _requestId) external auth(REFUND_ROLE) {
         Request storage request_ = requests[_receiver][_requestId];
         address token = request_.token;
