@@ -30,6 +30,8 @@ contract TokenRequest is AragonApp {
     string private constant ERROR_DEPOSIT_NOT_ACTIVE = "TOKENREQUEST_DEPOSIT_NOT_ACTIVE";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKENREQUEST_TOKEN_TRANSFER_REVERT";
     string private constant ERROR_TOKEN_APPROVE_FAILED = "TOKENREQUEST_TKN_APPROVE_FAILED";
+    string private constant ERROR_REFUND_REVERTED = "TOKENREQUEST_REFUND_REVERTED";
+    string private constant ERROR_TOKEN_REFUND_REVERTED = "TOKENREQUEST_TOKEN_REFUND_REVERTED";
 
      struct Request {
         uint256 depositAmount;
@@ -56,6 +58,7 @@ contract TokenRequest is AragonApp {
         uint256 voteId,
         uint256 requestId
         );
+    event ApprovedRefund(address indexed receiver, address token, uint256 amount);
 
      /**
     * @notice Initialize TokenRequest app contract
@@ -157,5 +160,25 @@ contract TokenRequest is AragonApp {
         tokenManager.mint(_receiver, _mintAmount);
         emit ApprovedRequest(_receiver, _depositToken, _depositAmount, _mintAmount, voteId, requestId);
 
+    }
+
+    function refund(address _receiver, uint256 _requestId) external auth(REFUND_ROLE) {
+        Request storage request_ = requests[_receiver][_requestId];
+        address token = request_.token;
+        uint256 amount = request_.depositAmount;
+        bool active = request_.active;
+
+        require(active = true, ERROR_DEPOSIT_NOT_ACTIVE);
+        require(amount > 0, ERROR_DEPOSIT_VALUE_ZERO);
+
+        if (token == ETH) {
+            require(_receiver.send(amount), ERROR_REFUND_REVERTED);
+        } else {
+            require(ERC20(token).safeTransfer(_receiver, amount), ERROR_TOKEN_REFUND_REVERTED);
+        }
+        request_.active = false;
+        request._amount = 0;
+
+        emit ApprovedRefund(_receiver, token, amount);
     }
 }
