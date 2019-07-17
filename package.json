@@ -1,0 +1,35 @@
+{
+  "name": "token-request",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "@aragon/apps-token-manager": "^2.1.0",
+    "@aragon/apps-vault": "^4.1.0",
+    "@aragon/client": "^1.1.0",
+    "@aragon/os": "^4.0.1"
+  },
+  "devDependencies": {
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-es2015": "^6.18.0",
+    "babel-preset-stage-2": "^6.24.1",
+    "babel-preset-stage-3": "^6.17.0",
+    "babel-register": "^6.23.0",
+    "@aragon/cli": "^5.4.0",
+    "parcel-bundler": "^1.11.0"
+  },
+  "scripts": {
+    "prepublishOnly": "aragon contracts compile",
+    "start": "aragon run",
+    "test": "aragon contracts test",
+    "compile": "aragon contracts compile",
+    "deploy": "aragon deploy",
+    "build:app": "parcel build app/index.html -d dist/ --public-url \".\" --no-cache",
+    "build:script": "parcel build app/script.js -d dist/ --no-cache",
+    "build": "npm run build:app && npm run build:script",
+    "publish:patch": "aragon apm publish patch",
+    "publish:minor": "aragon apm publish minor",
+    "publish:major": "aragon apm publish major",
+    "versions": "aragon apm versions"
+  },
+  "keywords": []
+}

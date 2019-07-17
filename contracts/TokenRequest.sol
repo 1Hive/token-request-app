@@ -1,161 +1,134 @@
 pragma solidity ^0.4.24;
 
 import "@aragon/os/contracts/apps/AragonApp.sol";
-import "@aragon/apps-token-manager/contracts/TokenManager.sol";
-import "@aragon/apps-vault/contracts/Vault.sol";
-import "@aragon/apps-voting/contracts/Voting.sol";
+import "@aragon/os/contracts/common/EtherTokenConstant.sol";
 import "@aragon/os/contracts/common/SafeERC20.sol";
 import "@aragon/os/contracts/lib/token/ERC20.sol";
-import "@aragon/os/contracts/lib/math/SafeMath.sol";
-import "@aragon/os/contracts/common/EtherTokenConstant.sol";
-import "./lib/ArrayUtils.sol";
+import "@aragon/apps-token-manager/contracts/TokenManager.sol";
+import "./lib/UintArrayLib.sol";
 
-
+/**
+* Expected use requires the FINALISE_TOKEN_REQUEST_ROLE permission be given exclusively to a forwarder. A user can then
+* request tokens by calling createTokenRequest() to deposit funds and then calling finaliseTokenRequest() which will be called
+* via the forwarder if forwarding is successful, minting the user tokens.
+*/
 contract TokenRequest is AragonApp {
-    using SafeMath for uint256;
 
-    bytes32 constant public TOKEN_REQUEST_ROLE = keccak256("TOKEN_REQUEST_ROLE");
-    bytes32 constant public REFUND_ROLE = keccak256("REFUND_ROLE");
-    bytes32 constant public VOTING_TOKEN_REQUEST_ROLE = keccak256("VOTING_TOKEN_REQUEST_ROLE");
+    using SafeERC20 for ERC20;
+    using UintArrayLib for uint256[];
 
-    string private constant ERROR_VAULT_NOT_CONTRACT = "TOKENREQUEST_VAULT_NOT_CONTRACT";
-    string private constant ERROR_TOKEN_MANAGER_NOT_CONTRACT = "TOKENREQUEST_TOKEN_MANAGER_NOT_CONTRACT";
-    string private constant ERROR_TOKEN_NOT_CONTRACT = "TOKENREQUEST_TOKEN_NOT_CONTRACT";
-    string private constant ERROR_CANNOT_MINT_ZERO = "TOKENREQUEST_CANNOT_MINT_ZERO";
-    string private constant ERROR_ETH_VALUE_MISMATCH = "TOKENREQUEST_ETH_VALUE_MISMATCH";
-    string private constant ERROR_DEPOSIT_VALUE_MISMATCH = "TOKENREQUEST_DEPOSIT_VALUE_MISMATCH";
-    string private constant ERROR_DEPOSIT_VALUE_ZERO = "TOKENREQUEST_DEPOSIT_VALUE_ZERO";
-    string private constant ERROR_DEPOSIT_TOKEN_MISMATCH = "TOKENREQUEST_DEPOSIT_TOKEN_MISMATCH";
-    string private constant ERROR_MINT_VALUE_MISMATCH = "TOKENREQUEST_MINT_VALUE_MISMATCH";
-    string private constant ERROR_DEPOSIT_NOT_ACTIVE = "TOKENREQUEST_DEPOSIT_NOT_ACTIVE";
-    string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKENREQUEST_TOKEN_TRANSFER_REVERT";
-    string private constant ERROR_TOKEN_APPROVE_FAILED = "TOKENREQUEST_TKN_APPROVE_FAILED";
+    bytes32 constant public FINALISE_TOKEN_REQUEST_ROLE = keccak256("FINALISE_TOKEN_REQUEST_ROLE");
 
-     struct Request {
+    string private constant ERROR_NO_AMOUNT = "TOKEN_REQUEST_NO_AMOUNT";
+    string private constant ERROR_NO_DEPOSIT = "TOKEN_REQUEST_NO_DEPOSIT";
+    string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
+    string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
+
+    struct TokenRequest {
+        address requesterAddress;
+        address depositToken;
         uint256 depositAmount;
-        address token;
-        uint256 mintAmount;
-        bool active;
+        uint256 requestAmount;
     }
 
-    Vault public vault;
     TokenManager public tokenManager;
-    Voting public voting;
-    MiniMeToken private token;              //temporary workaround, to show amount of tokens on radspecs's redeem function
+    address public vault;
 
-    // In case of refund how can we know which pending refund to do?
-    mapping (address => mapping (uint256 => Request)) internal requests;
-    mapping (address => uint256) public requestsLengths;
+    uint256 public nextTokenRequestId;
+    mapping(uint256 => TokenRequest) public tokenRequests; // ID => TokenRequest
+    mapping(address => uint256[]) public addressesTokenRequestIds; // Sender address => List of ID's
 
-    event Request(address indexed receiver, address depositToken, uint256 depositAmount, uint256 mintAmount, uint256 voteId, uint256 requestId);
-    event ApprovedRequest(
-        address indexed receiver,
-        address depositToken,
-        uint256 depositAmount,
-        uint256 mintAmount,
-        uint256 voteId,
-        uint256 requestId
-        );
+    event TokenRequestCreated(address requestCreator, uint256 requestId);
 
-     /**
-    * @notice Initialize TokenRequest app contract
-    * @param _vault Address of the vault
-    * @param _tokenManager TokenManager address
-    * @param _voting Address of the voting
-    */
-    function initialize(Vault _vault, TokenManager _tokenManager, Voting _voting) external onlyInit {
+    function initialize(address _tokenManager, address _vault) public onlyInit {
         initialized();
 
-        require(isContract(_vault), ERROR_VAULT_NOT_CONTRACT);
-        require(isContract(_tokenManager), ERROR_TOKEN_MANAGER_NOT_CONTRACT);
-
+        tokenManager = TokenManager(_tokenManager);
         vault = _vault;
-        tokenManager = _tokenManager;
-        voting = _voting;
-        token = _tokenManager.token();
     }
 
     /**
-    * @dev Request for approved ERC20 tokens or ETH
-    * @notice Request `@tokenAmount(_token.symbol(), _mintAmount)` in exchange for `@tokenAmount(_depositToken.symbol(), _depositAmount)`
-    * @param _depositToken Address of deposited token
-    * @param _depositAmount Amount of tokens sent
-    * @param _mintAmount Amount to be minted
-    * @param _executionScript Script to be executed by the voting
-    * @param _metadata Vote metadata
+    * @notice Create a token request for `@tokenAmount(_depositToken, _depositAmount, true, 18)` of token: `_token` in exchange for ???.
+    * @param _depositToken Address of the token being deposited
+    * @param _depositAmount Amount of the token being deposited
+    * @param _requestAmount Amount of the token being requested
     */
-    function request(
-        address _depositToken,
-        uint256 _depositAmount,
-        uint256 _mintAmount,
-        bytes _executionScript,
-        string _metadata
-    )
+    function createTokenRequest(address _depositToken, uint256 _depositAmount, uint256 _requestAmount)
         external
         payable
-        auth(TOKEN_REQUEST_ROLE)
+        returns (uint256)
     {
-        require(_mintAmount > 0, ERROR_CANNOT_MINT_ZERO);
+        require(_depositAmount > 0, ERROR_NO_AMOUNT);
+
         if (_depositToken == ETH) {
-            // Ensure that the ETH sent with the transaction equals the amount in the deposit
             require(msg.value == _depositAmount, ERROR_ETH_VALUE_MISMATCH);
         } else {
-             require(
-                    ERC20(_depositToken).safeTransferFrom(msg.sender, address(this), _depositAmount),
-                    ERROR_TOKEN_TRANSFER_REVERTED
-                );
+            require(ERC20(_depositToken).safeTransferFrom(msg.sender, address(this), _depositAmount), ERROR_TOKEN_TRANSFER_REVERTED);
         }
 
-        //Save the deposit amount into the mapping
-        uint256 requestId = requestsLengths[msg.sender]++;
-        Request storage request_ = requests[msg.sender] [requestId];
-        request_.token = _depositToken;
-        request_.depositAmount = _depositAmount;
-        request_.mintAmount = _mintAmount;
-        request_.active = true;
+        uint256 tokenRequestId = nextTokenRequestId;
+        nextTokenRequestId++;
 
-        uint256 voteId = voting.newVote(_executionScript,_metadata);
-        emit Request(msg.sender, _depositToken, _depositAmount, _mintAmount, voteId, requestId);
+        tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount);
+        addressesTokenRequestIds[msg.sender].push(tokenRequestId);
 
+        emit TokenRequestCreated(msg.sender, tokenRequestId);
+
+        return tokenRequestId;
     }
 
     /**
-    * @dev Function to be executed once the vote is approved
-    * @notice Request `@tokenAmount(_token.symbol(), _mintAmount)` in exchange for `@tokenAmount(_depositToken.symbol(), _depositAmount)`
-    * @param _receiver Receiver address
-    * @param _depositToken Address of deposited token
-    * @param _depositAmount Amount of tokens sent
-    * @param _mintAmount Amount to be minted
-    * @param _requestId Request Id for the _receiver
+    * @notice Refund the deposit for token request with id `_tokenRequestId` to the creators account.
+    * @param _tokenRequestId ID of the Token Request
     */
-    function _request(
-        address _receiver,
-        address _depositToken,
-        uint256 _depositAmount,
-        uint256 _mintAmount,
-        uint256 _requestId
-    )
-        external
-        auth(VOTING_TOKEN_REQUEST_ROLE)
-    {
+    function refundTokenRequest(uint256 _tokenRequestId) external {
+        TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
+        delete tokenRequests[_tokenRequestId];
 
-        Request storage request_ = requests[_receiver][_requestId];
-        require(request_.active = true, ERROR_DEPOSIT_NOT_ACTIVE);
-        require(request_.token = _depositToken, ERROR_DEPOSIT_TOKEN_MISMATCH);
-        require(request_.depositAmount > 0, ERROR_DEPOSIT_VALUE_ZERO);
-        require(request_.depositAmount = _depositAmount, ERROR_DEPOSIT_VALUE_MISMATCH);
-        require(request_.mintAmount = _mintAmount, ERROR_MINT_VALUE_MISMATCH);
+        require(tokenRequestCopy.depositAmount > 0, ERROR_NO_DEPOSIT);
 
-        request_.active = false;
-        if (_depositToken == ETH) {
-             vault.deposit.value(_depositAmount)(ETH, _depositAmount);
+        address refundToAddress = tokenRequestCopy.requesterAddress;
+        address refundToken = tokenRequestCopy.depositToken;
+        uint256 refundAmount = tokenRequestCopy.depositAmount;
+
+        if (refundToken == ETH) {
+            refundToAddress.transfer(refundAmount);
         } else {
-            require(ERC20(_depositToken).safeApprove(vault, _depositAmount), ERROR_TOKEN_APPROVE_FAILED);
-            vault.deposit(_depositToken, _depositAmount);
+            require(ERC20(refundToken).safeTransfer(refundToAddress, refundAmount), ERROR_TOKEN_TRANSFER_REVERTED);
         }
 
-        tokenManager.mint(_receiver, _mintAmount);
-        emit ApprovedRequest(_receiver, _depositToken, _depositAmount, _mintAmount, voteId, requestId);
-
+        uint256[] storage senderTokenRequestIds = addressesTokenRequestIds[msg.sender];
+        senderTokenRequestIds.deleteItem(_tokenRequestId);
     }
+
+    /**
+    * @notice Finalise the token request with id `_tokenRequestId`, minting the requester funds and moving payment
+              to the vault.
+    * @dev This function's FINALISE_TOKEN_REQUEST_ROLE permission is typically given exclusively to a forwarder.
+    *      It also requires the MINT_ROLE on the TokenManager specified.
+    *      It is recommended the forwarder is granted the FINALISE_TOKEN_REQUEST_ROLE permission to call this function
+    *      before the MINT_ROLE permission on the TokenManager to prevent calling of this function before it has been
+    *      restricted appropriately.
+    * @param _tokenRequestId ID of the Token Request
+    */
+    function finaliseTokenRequest(uint256 _tokenRequestId) external auth(FINALISE_TOKEN_REQUEST_ROLE) {
+        TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
+        delete tokenRequests[_tokenRequestId];
+
+        require(tokenRequestCopy.depositAmount > 0, ERROR_NO_DEPOSIT);
+
+        address requesterAddress = tokenRequestCopy.requesterAddress;
+        address depositToken = tokenRequestCopy.depositToken;
+        uint256 depositAmount = tokenRequestCopy.depositAmount;
+        uint256 requestAmount = tokenRequestCopy.requestAmount;
+
+        if (depositToken == ETH) {
+            vault.transfer(depositAmount);
+        } else {
+            require(ERC20(depositToken).safeTransfer(vault, depositAmount), ERROR_TOKEN_TRANSFER_REVERTED);
+        }
+
+        tokenManager.mint(requesterAddress, requestAmount);
+    }
+
 }
