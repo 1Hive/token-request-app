@@ -40,7 +40,7 @@ contract TokenRequest is AragonApp {
     mapping(uint256 => TokenRequest) public tokenRequests; // ID => TokenRequest
     mapping(address => uint256[]) public addressesTokenRequestIds; // Sender address => List of ID's
 
-    event TokenRequestCreated(address requestCreator, uint256 requestId);
+    event TokenRequestCreated(uint256 requestId);
     event TokenRequestRefunded(address refundToAddress, address refundToken, uint256 refundAmount);
     event TokenRequestFinalised(address requester, address depositToken, uint256 depositAmount, uint256 requestAmount);
 
@@ -92,7 +92,7 @@ contract TokenRequest is AragonApp {
         tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount);
         addressesTokenRequestIds[msg.sender].push(tokenRequestId);
 
-        emit TokenRequestCreated(msg.sender, tokenRequestId);
+        emit TokenRequestCreated(tokenRequestId);
 
         return tokenRequestId;
     }
@@ -117,8 +117,7 @@ contract TokenRequest is AragonApp {
             require(ERC20(refundToken).safeTransfer(refundToAddress, refundAmount), ERROR_TOKEN_TRANSFER_REVERTED);
         }
 
-        uint256[] storage senderTokenRequestIds = addressesTokenRequestIds[msg.sender];
-        senderTokenRequestIds.deleteItem(_tokenRequestId);
+        addressesTokenRequestIds[msg.sender].deleteItem(_tokenRequestId);
 
         emit TokenRequestRefunded(refundToAddress, refundToken, refundAmount);
     }
