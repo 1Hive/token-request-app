@@ -1,6 +1,16 @@
 {
   "roles": [
     {
+      "name": "Set Token Manager",
+      "id": "SET_TOKEN_MANAGER_ROLE",
+      "params": []
+    },
+    {
+      "name": "Set vault",
+      "id": "SET_VAULT_ROLE",
+      "params": []
+    },
+    {
       "name": "Finalise token request role",
       "id": "FINALISE_TOKEN_REQUEST_ROLE",
       "params": []

@@ -17,6 +17,8 @@ contract TokenRequest is AragonApp {
     using SafeERC20 for ERC20;
     using UintArrayLib for uint256[];
 
+    bytes32 constant public SET_TOKEN_MANAGER_ROLE = keccak256("SET_TOKEN_MANAGER_ROLE");
+    bytes32 constant public SET_VAULT_ROLE = keccak256("SET_VAULT_ROLE");
     bytes32 constant public FINALISE_TOKEN_REQUEST_ROLE = keccak256("FINALISE_TOKEN_REQUEST_ROLE");
 
     string private constant ERROR_NO_AMOUNT = "TOKEN_REQUEST_NO_AMOUNT";
@@ -39,11 +41,29 @@ contract TokenRequest is AragonApp {
     mapping(address => uint256[]) public addressesTokenRequestIds; // Sender address => List of ID's
 
     event TokenRequestCreated(address requestCreator, uint256 requestId);
+    event TokenRequestRefunded(address refundToAddress, address refundToken, uint256 refundAmount);
+    event TokenRequestFinalised(address requester, address depositToken, uint256 depositAmount, uint256 requestAmount);
 
     function initialize(address _tokenManager, address _vault) public onlyInit {
         initialized();
 
         tokenManager = TokenManager(_tokenManager);
+        vault = _vault;
+    }
+
+    /**
+    * @notice Set the Token Manager to `_tokenManager`.
+    * @param _tokenManager The new token manager address
+    */
+    function setTokenManager(address _tokenManager) external auth(SET_TOKEN_MANAGER_ROLE) {
+        tokenManager = TokenManager(_tokenManager);
+    }
+
+    /**
+    * @notice Set the Vault to `_vault`.
+    * @param _vault The new vault address
+    */
+    function setVault(address _vault) external auth(SET_VAULT_ROLE) {
         vault = _vault;
     }
 
@@ -99,6 +119,8 @@ contract TokenRequest is AragonApp {
 
         uint256[] storage senderTokenRequestIds = addressesTokenRequestIds[msg.sender];
         senderTokenRequestIds.deleteItem(_tokenRequestId);
+
+        emit TokenRequestRefunded(refundToAddress, refundToken, refundAmount);
     }
 
     /**
@@ -129,6 +151,8 @@ contract TokenRequest is AragonApp {
         }
 
         tokenManager.mint(requesterAddress, requestAmount);
+
+        emit TokenRequestFinalised(requesterAddress, depositToken, depositAmount, requestAmount);
     }
 
 }
