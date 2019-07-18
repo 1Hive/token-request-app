@@ -44,7 +44,7 @@ contract TokenRequest is AragonApp {
     event TokenRequestRefunded(address refundToAddress, address refundToken, uint256 refundAmount);
     event TokenRequestFinalised(address requester, address depositToken, uint256 depositAmount, uint256 requestAmount);
 
-    function initialize(address _tokenManager, address _vault) public onlyInit {
+    function initialize(address _tokenManager, address _vault) external onlyInit {
         initialized();
 
         tokenManager = TokenManager(_tokenManager);
@@ -68,7 +68,8 @@ contract TokenRequest is AragonApp {
     }
 
     /**
-    * @notice Create a token request for `@tokenAmount(_depositToken, _depositAmount, true, 18)` of token: `_token` in exchange for ???.
+    * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, _depositToken.decimals(): uint256)` in exchange for
+              `@tokenAmount(tokenManager.token(): address, _requestAmount, true, tokenManager.token().decimals(): uint256)`.
     * @param _depositToken Address of the token being deposited
     * @param _depositAmount Amount of the token being deposited
     * @param _requestAmount Amount of the token being requested
@@ -126,7 +127,7 @@ contract TokenRequest is AragonApp {
     * @notice Finalise the token request with id `_tokenRequestId`, minting the requester funds and moving payment
               to the vault.
     * @dev This function's FINALISE_TOKEN_REQUEST_ROLE permission is typically given exclusively to a forwarder.
-    *      It also requires the MINT_ROLE on the TokenManager specified.
+    *      This contract also requires the MINT_ROLE on the TokenManager specified.
     *      It is recommended the forwarder is granted the FINALISE_TOKEN_REQUEST_ROLE permission to call this function
     *      before the MINT_ROLE permission on the TokenManager to prevent calling of this function before it has been
     *      restricted appropriately.
