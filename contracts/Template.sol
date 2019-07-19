@@ -84,7 +84,7 @@ contract Template is TemplateBase {
         // Initialize apps
         vault.initialize();
         tokenManager.initialize(token, true, 0);
-        tokenRequest.initialize(vault, tokenManager, voting);
+        tokenRequest.initialize(tokenManager, vault);
         voting.initialize(token, 50 * PCT, 20 * PCT, 1 days);
 
         acl.createPermission(this, tokenManager, tokenManager.MINT_ROLE(), this);
@@ -93,9 +93,9 @@ contract Template is TemplateBase {
 
 
         acl.createPermission(tokenManager, voting, voting.CREATE_VOTES_ROLE(), root);
-        acl.createPermission(tokenManager, tokenRequest, tokenRequest.TOKEN_REQUEST_ROLE(), root);
-        acl.createPermission(tokenManager, tokenRequest, tokenRequest.REFUND_ROLE(), root);
-        acl.createPermission(voting, tokenRequest, tokenRequest.VOTING_TOKEN_REQUEST_ROLE(), root);
+        acl.createPermission(tokenManager, tokenRequest, tokenRequest.SET_TOKEN_MANAGER_ROLE(), root);
+        acl.createPermission(tokenManager, tokenRequest, tokenRequest.SET_VAULT_ROLE(), root);
+        acl.createPermission(voting, tokenRequest, tokenRequest.FINALISE_TOKEN_REQUEST_ROLE(), root);
 
         // Clean up permissions
 

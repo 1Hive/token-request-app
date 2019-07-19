@@ -22,6 +22,7 @@ contract TokenRequest is AragonApp {
     bytes32 constant public FINALISE_TOKEN_REQUEST_ROLE = keccak256("FINALISE_TOKEN_REQUEST_ROLE");
 
     string private constant ERROR_NO_AMOUNT = "TOKEN_REQUEST_NO_AMOUNT";
+    string private constant ERROR_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
     string private constant ERROR_NO_DEPOSIT = "TOKEN_REQUEST_NO_DEPOSIT";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
@@ -68,8 +69,8 @@ contract TokenRequest is AragonApp {
     }
 
     /**
-    * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, _depositToken.decimals(): uint256)` in exchange for
-              `@tokenAmount(tokenManager.token(): address, _requestAmount, true, tokenManager.token().decimals(): uint256)`.
+    * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, _depositToken.decimals(): uint256)` in exchange for `@tokenAmount(self.tokenManager().token(): address, _requestAmount, true, self.tokenManager().token().decimals(): uint256)`
+    * @dev Note the above radspec string seems to need to be on a single line. When split compile errors occur.
     * @param _depositToken Address of the token being deposited
     * @param _depositAmount Amount of the token being deposited
     * @param _requestAmount Amount of the token being requested
@@ -106,6 +107,7 @@ contract TokenRequest is AragonApp {
         TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
         delete tokenRequests[_tokenRequestId];
 
+        require(tokenRequestCopy.requesterAddress == msg.sender, ERROR_NOT_OWNER);
         require(tokenRequestCopy.depositAmount > 0, ERROR_NO_DEPOSIT);
 
         address refundToAddress = tokenRequestCopy.requesterAddress;
