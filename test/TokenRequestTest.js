@@ -1,7 +1,11 @@
+const { encodeCallScript } = require("@aragon/test-helpers/evmScript");
+
 const TokenRequest = artifacts.require("TokenRequest");
 const TokenManager = artifacts.require("TokenManager");
-const VotingApp = artifacts.require("Voting");
+const ForwarderMock = artifacts.require("ForwarderMock");
 const MockErc20 = artifacts.require("TokenMock");
+const MiniMeTokenFactory = artifacts.require("MiniMeTokenFactory");
+const MiniMeToken = artifacts.require("MiniMeToken");
 
 import DaoDeployment from "./helpers/DaoDeployment";
 import { deployedContract } from "./helpers/helpers";
@@ -17,11 +21,12 @@ contract("TokenRequest", ([rootAccount, vault, ...accounts]) => {
     tokenRequest,
     tokenManagerBase,
     tokenManager,
-    votingBase,
-    mockErc20;
+    mockErc20,
+    requestableToken;
+
   let FINALISE_TOKEN_REQUEST_ROLE, MINT_ROLE;
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-  const MOCK_TOKEN_BALANCE = 1000;
+  let MOCK_TOKEN_BALANCE, ROOT_TOKEN_AMOUNT;
 
   const getBalance = getBalanceFn(web3);
 
@@ -33,12 +38,11 @@ contract("TokenRequest", ([rootAccount, vault, ...accounts]) => {
 
     tokenManagerBase = await TokenManager.new();
     MINT_ROLE = await tokenManagerBase.MINT_ROLE();
-
-    votingBase = await VotingApp.new();
   });
 
   beforeEach(async () => {
-    const ROOT_TOKEN_AMOUNT = 100;
+    ROOT_TOKEN_AMOUNT = 100;
+    MOCK_TOKEN_BALANCE = 100;
 
     await daoDeployment.deployBeforeEach(rootAccount);
     const newTokenRequestAppReceipt = await daoDeployment.kernel.newAppInstance(
@@ -59,6 +63,7 @@ contract("TokenRequest", ([rootAccount, vault, ...accounts]) => {
       false,
       { from: rootAccount }
     );
+
     tokenManager = await TokenManager.at(
       deployedContract(newTokenManagerAppReceipt)
     );
@@ -85,7 +90,6 @@ contract("TokenRequest", ([rootAccount, vault, ...accounts]) => {
     it("creates a new token request on exchange for Ether", async () => {
       const expectedTRBalance = 2000;
       const expectedNextTokenRequestId = 1;
-      const expectedTokenRequestIdInPosition = 1;
 
       await tokenRequest.createTokenRequest(ZERO_ADDRESS, 2000, 1, {
         value: 2000
@@ -98,6 +102,95 @@ contract("TokenRequest", ([rootAccount, vault, ...accounts]) => {
 
       assert.equal(actualTRBalance, expectedTRBalance);
       assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId);
+    });
+
+    it("creates a new token request on exchange for TokenMock", async () => {
+      const expectedTRBalance = ROOT_TOKEN_AMOUNT;
+      const expectedNextTokenRequestId = 1;
+
+      await mockErc20.approve(tokenRequest.address, ROOT_TOKEN_AMOUNT, {
+        from: rootAccount
+      });
+
+      await tokenRequest.createTokenRequest(
+        mockErc20.address,
+        ROOT_TOKEN_AMOUNT,
+        300
+      );
+
+      const actualTRBalance = await mockErc20.balanceOf(tokenRequest.address);
+
+      const actualNextTokenRequestId = await tokenRequest.nextTokenRequestId();
+
+      assert.equal(actualTRBalance, expectedTRBalance);
+      assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId);
+    });
+  });
+
+  describe("finaliseTokenRequest(uint256 _tokenRequestId)", () => {
+    let script, forwarderMock;
+    beforeEach("assign roles and create token request", async () => {
+      forwarderMock = await ForwarderMock.new();
+
+      await forwarderMock.initialize();
+
+      await daoDeployment.acl.createPermission(
+        rootAccount,
+        forwarderMock.address,
+        FINALISE_TOKEN_REQUEST_ROLE,
+        rootAccount
+      );
+      await daoDeployment.acl.createPermission(
+        rootAccount,
+        tokenRequest.address,
+        MINT_ROLE,
+        rootAccount
+      );
+
+      const miniMeTokenFactory = await MiniMeTokenFactory.new();
+      requestableToken = await MiniMeToken.new(
+        miniMeTokenFactory.address,
+        ZERO_ADDRESS,
+        0,
+        "RequestableToken",
+        18,
+        "RQT",
+        true
+      );
+
+      await requestableToken.changeController(tokenManager.address);
+      await tokenManager.initialize(requestableToken.address, false, 0);
+
+      await mockErc20.approve(tokenRequest.address, ROOT_TOKEN_AMOUNT, {
+        from: rootAccount
+      });
+
+      await tokenRequest.createTokenRequest(
+        mockErc20.address,
+        ROOT_TOKEN_AMOUNT,
+        300
+      );
+
+      const action = {
+        to: tokenRequest.address,
+        calldata: tokenRequest.contract.methods
+          .finaliseTokenRequest(0)
+          .encodeABI()
+      };
+      script = encodeCallScript([action]);
+    });
+
+    it("finalise token request", async () => {
+      const expectedUserMiniMeBalance = 300;
+
+      await forwarderMock.forward(script, { from: rootAccount });
+
+      //   tokenRequest.finaliseTokenRequest(0, { from: voting.address });
+
+      const actualUserMiniMeBalance = await requestableToken.balanceOf(
+        rootAccount
+      );
+      assert.equal(actualUserMiniMeBalance, expectedUserMiniMeBalance);
     });
   });
 });
