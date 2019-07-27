@@ -5,7 +5,7 @@ import "@aragon/os/contracts/common/IForwarder.sol";
 
 contract ForwarderMock is IForwarder, AragonApp { 
 
-    function initialize() external onlyInit {
+    function initialize() external {
         initialized();
     }
 
