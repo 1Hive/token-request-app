@@ -13,20 +13,11 @@ const Vault = artifacts.require('Vault')
 
 contract('TokenRequest', ([rootAccount, ...accounts]) => {
   let daoDeployment = new DaoDeployment()
-  let requestableToken,
-    tokenRequestBase,
-    tokenRequest,
-    tokenManager,
-    tokenManager2,
-    tokenManagerBase,
-    mockErc20,
-    vaultBase,
-    vault,
-    vault2
+  let requestableToken, tokenRequestBase, tokenRequest, tokenManager, tokenManagerBase, mockErc20, vaultBase, vault
 
   let FINALISE_TOKEN_REQUEST_ROLE, MINT_ROLE, SET_TOKEN_MANAGER_ROLE, SET_VAULT_ROLE
   const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
-  let MOCK_TOKEN_BALANCE, ROOT_TOKEN_AMOUNT
+  let MOCK_TOKEN_BALANCE, ROOT_TOKEN_AMOUNT, ROOT_ETHER_AMOUNT
 
   const getBalance = getBalanceFn(web3)
 
@@ -45,6 +36,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
   })
 
   beforeEach(async () => {
+    ROOT_ETHER_AMOUNT = 2000
     ROOT_TOKEN_AMOUNT = 100
     MOCK_TOKEN_BALANCE = 100
 
@@ -102,7 +94,8 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
     })
   })
 
-  describe('function setTokenManager(address _tokenManager)', () => {
+  describe('setTokenManager(address _tokenManager)', () => {
+    let tokenManager2
     beforeEach(async () => {
       const newTokenManagerAppReceipt2 = await daoDeployment.kernel.newAppInstance(
         '0x5555',
@@ -112,10 +105,9 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         { from: rootAccount }
       )
       tokenManager2 = await TokenManager.at(deployedContract(newTokenManagerAppReceipt2))
+      await daoDeployment.acl.createPermission(accounts[1], tokenRequest.address, SET_TOKEN_MANAGER_ROLE, rootAccount)
     })
     it('sets a token manager', async () => {
-      await daoDeployment.acl.createPermission(accounts[1], tokenRequest.address, SET_TOKEN_MANAGER_ROLE, rootAccount)
-
       await tokenRequest.setTokenManager(tokenManager2.address, { from: accounts[1] })
 
       const actualTokenManager = await tokenRequest.tokenManager()
@@ -123,16 +115,17 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
     })
   })
 
-  describe('function setVault(address _vault)', () => {
+  describe('setVault(address _vault)', () => {
+    let vault2
     beforeEach(async () => {
       const newVaultAppReceipt2 = await daoDeployment.kernel.newAppInstance('0x8889', vaultBase.address, '0x', false, {
         from: rootAccount,
       })
       vault2 = await Vault.at(deployedContract(newVaultAppReceipt2))
-    })
-    it('sets a vault', async () => {
       await daoDeployment.acl.createPermission(accounts[1], tokenRequest.address, SET_VAULT_ROLE, rootAccount)
+    })
 
+    it('sets a vault', async () => {
       await tokenRequest.setVault(vault2.address, { from: accounts[1] })
 
       const actualVault = await tokenRequest.vault()
@@ -142,17 +135,17 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
   describe('createTokenRequest(address _depositToken, uint256 _depositAmount, uint256 _requestAmount)', () => {
     it('creates a new token request on exchange for Ether', async () => {
-      const expectedTRBalance = 2000
+      const expectedEtherBalance = 2000
       const expectedNextTokenRequestId = 1
 
-      await tokenRequest.createTokenRequest(ZERO_ADDRESS, 2000, 1, {
-        value: 2000,
+      await tokenRequest.createTokenRequest(ZERO_ADDRESS, ROOT_ETHER_AMOUNT, 1, {
+        value: ROOT_ETHER_AMOUNT,
       })
 
-      const actualTRBalance = (await getBalance(tokenRequest.address)).valueOf()
+      const actualEtherBalance = (await getBalance(tokenRequest.address)).valueOf()
       const actualNextTokenRequestId = await tokenRequest.nextTokenRequestId()
 
-      assert.equal(actualTRBalance, expectedTRBalance)
+      assert.equal(actualEtherBalance, expectedEtherBalance)
       assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId)
     })
 
@@ -222,11 +215,17 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         FINALISE_TOKEN_REQUEST_ROLE,
         rootAccount
       )
+
+      const action = {
+        to: tokenRequest.address,
+        calldata: tokenRequest.contract.methods.finaliseTokenRequest(0).encodeABI(),
+      }
+      script = encodeCallScript([action])
     })
 
     it('finalise token request (ERC20)', async () => {
       const expectedUserMiniMeBalance = 300
-      const expectedVaultBalance = 100
+      const expectedVaultBalance = ROOT_TOKEN_AMOUNT
 
       await mockErc20.approve(tokenRequest.address, ROOT_TOKEN_AMOUNT, {
         from: rootAccount,
@@ -235,11 +234,6 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         from: rootAccount,
       })
 
-      const action = {
-        to: tokenRequest.address,
-        calldata: tokenRequest.contract.methods.finaliseTokenRequest(0).encodeABI(),
-      }
-      script = encodeCallScript([action])
       await forwarderMock.forward(script, { from: rootAccount })
 
       const actualUserMiniMeBalance = await tokenManager.spendableBalanceOf(rootAccount)
@@ -258,11 +252,6 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         value: expectedVaultBalance,
       })
 
-      const action = {
-        to: tokenRequest.address,
-        calldata: tokenRequest.contract.methods.finaliseTokenRequest(0).encodeABI(),
-      }
-      script = encodeCallScript([action])
       await forwarderMock.forward(script, { from: rootAccount })
 
       const actualUserMiniMeBalance = await tokenManager.spendableBalanceOf(rootAccount)
@@ -274,27 +263,27 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
   })
 
   describe('refundTokenRequest(uint256 _tokenRequestId) ', () => {
-    it('refound token (ERC20)', async () => {
-      const expectedRefoundAmount = 100
+    it('refund token (ERC20)', async () => {
+      const expectedRefundAmount = ROOT_TOKEN_AMOUNT
 
-      await mockErc20.approve(tokenRequest.address, expectedRefoundAmount, {
+      await mockErc20.approve(tokenRequest.address, expectedRefundAmount, {
         from: rootAccount,
       })
-      await tokenRequest.createTokenRequest(mockErc20.address, expectedRefoundAmount, 1, {
+      await tokenRequest.createTokenRequest(mockErc20.address, expectedRefundAmount, 1, {
         from: rootAccount,
       })
 
       await tokenRequest.refundTokenRequest(0, { from: rootAccount })
 
-      const actualAmounAfterRefound = await mockErc20.balanceOf(rootAccount)
-      assert.equal(actualAmounAfterRefound, expectedRefoundAmount)
+      const actualAmounAfterRefund = await mockErc20.balanceOf(rootAccount)
+      assert.equal(actualAmounAfterRefund, expectedRefundAmount)
     })
 
-    it('should not refound a a token request from other user', async () => {
-      await mockErc20.approve(tokenRequest.address, 100, {
+    it('should not refund a a token request from other user', async () => {
+      await mockErc20.approve(tokenRequest.address, ROOT_TOKEN_AMOUNT, {
         from: rootAccount,
       })
-      await tokenRequest.createTokenRequest(mockErc20.address, 100, 1, {
+      await tokenRequest.createTokenRequest(mockErc20.address, ROOT_TOKEN_AMOUNT, 1, {
         from: rootAccount,
       })
 
