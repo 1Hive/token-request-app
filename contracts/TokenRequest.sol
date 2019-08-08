@@ -154,6 +154,8 @@ contract TokenRequest is AragonApp {
 
         tokenManager.mint(requesterAddress, requestAmount);
 
+        addressesTokenRequestIds[requesterAddress].deleteItem(_tokenRequestId);
+
         emit TokenRequestFinalised(requesterAddress, depositToken, depositAmount, requestAmount);
     }
 

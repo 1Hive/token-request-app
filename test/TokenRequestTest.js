@@ -38,7 +38,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
   beforeEach(async () => {
     ROOT_ETHER_AMOUNT = 2000
     ROOT_TOKEN_AMOUNT = 100
-    MOCK_TOKEN_BALANCE = 100
+    MOCK_TOKEN_BALANCE = 100000
 
     await daoDeployment.deployBeforeEach(rootAccount)
     const miniMeTokenFactory = await MiniMeTokenFactory.new()
@@ -80,7 +80,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
     await tokenManager.initialize(requestableToken.address, false, 0)
 
     mockErc20 = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
-    await mockErc20.transfer(rootAccount, ROOT_TOKEN_AMOUNT)
+    //await mockErc20.transfer(rootAccount, ROOT_TOKEN_AMOUNT)
   })
 
   describe('initialize(address _tokenManager, address _vault)', () => {
@@ -245,23 +245,42 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         assert.equal(actualUserMiniMeBalance, expectedUserMiniMeBalance)
         assert.equal(actualVaultBalance, expectedVaultBalance)
       })
+      it('it should not finalise the same request twice', async () => {
+        const expectedUserMiniMeBalance = 300
+        const expectedVaultBalance = 200
+
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, {
+          from: rootAccount,
+          value: expectedVaultBalance,
+        })
+
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, {
+          from: rootAccount,
+          value: expectedVaultBalance,
+        })
+
+        await forwarderMock.forward(script, { from: rootAccount })
+
+        await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_NO_DEPOSIT')
+      })
     })
 
     describe('refundTokenRequest(uint256 _tokenRequestId) ', () => {
       it('refund token (ERC20)', async () => {
-        const expectedRefundAmount = ROOT_TOKEN_AMOUNT
+        const refundAmount = 100
+        const expectedUserBalance = await mockErc20.balanceOf(rootAccount)
 
-        await mockErc20.approve(tokenRequest.address, expectedRefundAmount, {
+        await mockErc20.approve(tokenRequest.address, refundAmount, {
           from: rootAccount,
         })
-        await tokenRequest.createTokenRequest(mockErc20.address, expectedRefundAmount, 1, {
+        await tokenRequest.createTokenRequest(mockErc20.address, refundAmount, 1, {
           from: rootAccount,
         })
 
         await tokenRequest.refundTokenRequest(0, { from: rootAccount })
 
-        const actualAmounAfterRefund = await mockErc20.balanceOf(rootAccount)
-        assert.equal(actualAmounAfterRefund, expectedRefundAmount)
+        const actualUserBalance = await mockErc20.balanceOf(rootAccount)
+        assert.equal(Number(actualUserBalance), Number(expectedUserBalance))
       })
 
       it('refund ETH', async () => {
@@ -295,6 +314,17 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         })
 
         await assertRevert(tokenRequest.refundTokenRequest(0, { from: accounts[1] }), 'TOKEN_REQUEST_NOT_OWNER')
+      })
+
+      it('should not refund the same request twice', async () => {
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, 1000000000000000, 1, {
+          value: 1000000000000000,
+          from: accounts[2],
+        })
+
+        await tokenRequest.refundTokenRequest(0, { from: accounts[2] })
+
+        await assertRevert(tokenRequest.refundTokenRequest(0, { from: accounts[2] }), 'TOKEN_REQUEST_NOT_OWNER')
       })
     })
   })
