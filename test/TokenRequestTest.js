@@ -284,7 +284,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         assert.equal(Number(actualUserBalance), Number(expectedUserBalance))
       })
 
-      it('refund ETH', async () => {
+      it.only('refund ETH', async () => {
         const weiValue = 3000000000000000
         const expectedETHBalance = await web3.eth.getBalance(refundEthAccount)
 
@@ -293,13 +293,13 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
           from: refundEthAccount,
         })
 
-        const tx = await web3.eth.getTransaction(request.tx)
-        const requestPrice = request.receipt.gasUsed * tx.gasPrice
+        const requestTransaction = await web3.eth.getTransaction(request.tx)
+        const requestPrice = request.receipt.gasUsed * requestTransaction.gasPrice
 
         const refund = await tokenRequest.refundTokenRequest(0, { from: refundEthAccount })
 
-        const tx2 = await web3.eth.getTransaction(refund.tx)
-        const refundPrice = refund.receipt.gasUsed * tx2.gasPrice
+        const refundTransaction = await web3.eth.getTransaction(refund.tx)
+        const refundPrice = refund.receipt.gasUsed * refundTransaction.gasPrice
 
         const actualBalance = await web3.eth.getBalance(refundEthAccount)
         const actualETHBalance = Number(actualBalance) + refundPrice + requestPrice
