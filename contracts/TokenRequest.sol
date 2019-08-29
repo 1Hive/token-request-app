@@ -6,50 +6,70 @@ import "@aragon/os/contracts/common/SafeERC20.sol";
 import "@aragon/os/contracts/lib/token/ERC20.sol";
 import "@aragon/apps-token-manager/contracts/TokenManager.sol";
 import "./lib/UintArrayLib.sol";
+import "./lib/ArrayUtils.sol";
 
 /**
 * Expected use requires the FINALISE_TOKEN_REQUEST_ROLE permission be given exclusively to a forwarder. A user can then
 * request tokens by calling createTokenRequest() to deposit funds and then calling finaliseTokenRequest() which will be called
 * via the forwarder if forwarding is successful, minting the user tokens.
 */
-contract TokenRequest is AragonApp {
+  contract TokenRequest is EtherTokenConstant, AragonApp {
 
     using SafeERC20 for ERC20;
     using UintArrayLib for uint256[];
+    using ArrayUtils for address[];
 
     bytes32 constant public SET_TOKEN_MANAGER_ROLE = keccak256("SET_TOKEN_MANAGER_ROLE");
     bytes32 constant public SET_VAULT_ROLE = keccak256("SET_VAULT_ROLE");
     bytes32 constant public FINALISE_TOKEN_REQUEST_ROLE = keccak256("FINALISE_TOKEN_REQUEST_ROLE");
+    bytes32 constant public ADD_TOKEN_ROLE = keccak256("ADD_TOKEN_ROLE");
+    bytes32 constant public REMOVE_TOKEN_ROLE = keccak256("REMOVE_TOKEN_ROLE");
+    bytes32 constant public SUBMIT_TOKEN_REQUEST_ROLE = keccak256("SUBMIT_TOKEN_REQUEST_ROLE");
+    bytes32 constant public SET_TIME_TO_EXPIRY_ROLE = keccak256("SET_TIME_TO_EXPIRY_ROLE");
 
     string private constant ERROR_NO_AMOUNT = "TOKEN_REQUEST_NO_AMOUNT";
     string private constant ERROR_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
     string private constant ERROR_NO_DEPOSIT = "TOKEN_REQUEST_NO_DEPOSIT";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
+    string private constant ERROR_CANNOT_ADD_TOKEN_MANAGER = "TOKEN_REQUEST_CANNOT_ADD_TOKEN_MANAGER";
+    string private constant ERROR_TOKEN_ALREADY_ADDED = "TOKEN_REQUEST_TOKEN_ALREADY_ADDED";
+    string private constant ERROR_TOKEN_NOT_CONTRACT = "TOKEN_REQUEST_TOKEN_NOT_CONTRACT";
+    string private constant ERROR_TOKEN_NOT_EXIST = "TOKEN_REQUEST_ERROR_TOKEN_NOT_EXIST";
 
     struct TokenRequest {
         address requesterAddress;
         address depositToken;
         uint256 depositAmount;
         uint256 requestAmount;
+        uint64 date;
     }
 
     TokenManager public tokenManager;
     address public vault;
 
+    mapping(address => bool) public tokenAdded;
+    address[] public acceptedTokenList;
+
+    uint256 public timeToExpiry;
     uint256 public nextTokenRequestId;
+
     mapping(uint256 => TokenRequest) public tokenRequests; // ID => TokenRequest
     mapping(address => uint256[]) public addressesTokenRequestIds; // Sender address => List of ID's
 
-    event TokenRequestCreated(uint256 requestId);
-    event TokenRequestRefunded(address refundToAddress, address refundToken, uint256 refundAmount);
-    event TokenRequestFinalised(address requester, address depositToken, uint256 depositAmount, uint256 requestAmount);
+    event TokenRequestCreated(uint256 requestId, address requesterAddress, address depositToken, uint256 depositAmount, uint256 requestAmount, uint64 date);
+    event TokenRequestRefunded(uint256 requestId,address refundToAddress, address refundToken, uint256 refundAmount, uint64 refundedDate);
+    event TokenRequestFinalised(uint256 requestId, address requester, address depositToken, uint256 depositAmount, uint256 requestAmount, uint64 finalizedDate);
+    event AddToken(address indexed token);
+    event RemoveToken(address indexed token);
+    event SetTimeToExpiry(uint256 timeToExpiry);
 
-    function initialize(address _tokenManager, address _vault) external onlyInit {
-        initialized();
-
+    function initialize(address _tokenManager, address _vault, uint256 _timeToExpiry) external onlyInit {
         tokenManager = TokenManager(_tokenManager);
         vault = _vault;
+        timeToExpiry = _timeToExpiry;
+        initialized();
+        //tokens.push(0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359);
     }
 
     /**
@@ -67,9 +87,49 @@ contract TokenRequest is AragonApp {
     function setVault(address _vault) external auth(SET_VAULT_ROLE) {
         vault = _vault;
     }
+    
+    /**
+    * @notice Sets timeToExpiry to `_lockAmount`
+    * @param _timeToExpiry The new timeToExpiry
+    */
+    function setTimeToExpiry(uint256 _timeToExpiry) external auth(SET_TIME_TO_EXPIRY_ROLE) {
+        timeToExpiry = _timeToExpiry;
+        emit SetTimeToExpiry(timeToExpiry);
+    }
+    /**
+    * @notice Add `_token.symbol()` token to redemption list
+    * @param _token token address
+    */
+    function addToken(address _token) external auth(ADD_TOKEN_ROLE) {
+        require(_token != address(tokenManager), ERROR_CANNOT_ADD_TOKEN_MANAGER);
+        require(!tokenAdded[_token], ERROR_TOKEN_ALREADY_ADDED);
+
+        if (_token != ETH) {
+            require(isContract(_token), ERROR_TOKEN_NOT_CONTRACT);
+        }
+
+        tokenAdded[_token] = true;
+        acceptedTokenList.push(_token);
+
+        emit AddToken(_token);
+    }
 
     /**
-    * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, _depositToken.decimals(): uint256)` in exchange for `@tokenAmount(self.tokenManager().token(): address, _requestAmount, true, self.tokenManager().token().decimals(): uint256)`
+    * @notice Remove `_token.symbol()` token from redemption list
+    * @param _token token address
+    */
+    function removeToken(address _token) external auth(REMOVE_TOKEN_ROLE) {
+        require(tokenAdded[_token], ERROR_TOKEN_NOT_EXIST);
+
+        tokenAdded[_token] = false;
+        acceptedTokenList.deleteItem(_token);
+        
+
+        emit RemoveToken(_token);
+    }
+
+    /**
+    * 
     * @dev Note the above radspec string seems to need to be on a single line. When split compile errors occur.
     * @param _depositToken Address of the token being deposited
     * @param _depositAmount Amount of the token being deposited
@@ -91,12 +151,13 @@ contract TokenRequest is AragonApp {
         uint256 tokenRequestId = nextTokenRequestId;
         nextTokenRequestId++;
 
-        tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount);
+        uint64 date = getTimestamp64();
+        tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount, date);
         addressesTokenRequestIds[msg.sender].push(tokenRequestId);
 
-        emit TokenRequestCreated(tokenRequestId);
-
+        emit TokenRequestCreated(tokenRequestId, msg.sender, _depositToken, _depositAmount, _requestAmount, date);
         return tokenRequestId;
+
     }
 
     /**
@@ -121,9 +182,14 @@ contract TokenRequest is AragonApp {
         }
 
         addressesTokenRequestIds[msg.sender].deleteItem(_tokenRequestId);
+        uint64 refundedDate = getTimestamp64();
 
-        emit TokenRequestRefunded(refundToAddress, refundToken, refundAmount);
+        emit TokenRequestRefunded(_tokenRequestId, refundToAddress, refundToken, refundAmount, refundedDate);
     }
+
+    // function submitTokenRequest(uint256 _tokenRequestId) external auth(SUBMIT_TOKEN_REQUEST_ROLE) {
+    //     finaliseTokenRequest(_tokenRequestId);
+    // }
 
     /**
     * @notice Finalise the token request with id `_tokenRequestId`, minting the requester funds and moving payment
@@ -153,8 +219,29 @@ contract TokenRequest is AragonApp {
         }
 
         tokenManager.mint(requesterAddress, requestAmount);
+        uint64 finalizedDate = getTimestamp64();
 
-        emit TokenRequestFinalised(requesterAddress, depositToken, depositAmount, requestAmount);
+        emit TokenRequestFinalised(_tokenRequestId, requesterAddress, depositToken, depositAmount, requestAmount, finalizedDate);
     }
 
+    function getAcceptedTokenList()
+        public
+        view
+        returns (address[])
+    {
+        return acceptedTokenList;
+    }
+
+    function getTokenRequest(uint256 _tokenRequestId) 
+    public 
+    view 
+    returns (address requesterAddress, address depositToken, uint256 depositAmount, uint256 requestAmount, uint64 date) {
+        TokenRequest storage tokenRequest = tokenRequests[_tokenRequestId];
+
+        requesterAddress = tokenRequest.requesterAddress;
+        depositToken = tokenRequest.depositToken;
+        depositAmount = tokenRequest.depositAmount;
+        requestAmount = tokenRequest.requestAmount;
+    }
+    
 }
