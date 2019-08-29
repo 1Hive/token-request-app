@@ -22,7 +22,7 @@ contract TokenRequest is AragonApp {
     bytes32 constant public FINALISE_TOKEN_REQUEST_ROLE = keccak256("FINALISE_TOKEN_REQUEST_ROLE");
 
     string private constant ERROR_NO_AMOUNT = "TOKEN_REQUEST_NO_AMOUNT";
-    string private constant ERROR_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
+    string private constant ERROR_TOKEN_REQUEST_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
     string private constant ERROR_NO_DEPOSIT = "TOKEN_REQUEST_NO_DEPOSIT";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
@@ -107,8 +107,7 @@ contract TokenRequest is AragonApp {
         TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
         delete tokenRequests[_tokenRequestId];
 
-        require(tokenRequestCopy.requesterAddress == msg.sender, ERROR_NOT_OWNER);
-        require(tokenRequestCopy.depositAmount > 0, ERROR_NO_DEPOSIT);
+        require(tokenRequestCopy.requesterAddress == msg.sender, ERROR_TOKEN_REQUEST_NOT_OWNER);
 
         address refundToAddress = tokenRequestCopy.requesterAddress;
         address refundToken = tokenRequestCopy.depositToken;

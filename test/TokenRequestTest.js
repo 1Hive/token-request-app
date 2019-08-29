@@ -152,8 +152,8 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         )
       })
 
-      it('creates a new token request on exchange for TokenMock', async () => {
-        const expectedTRBalance = ROOT_TOKEN_AMOUNT
+      it('creates a new token request in exchange for TokenMock', async () => {
+        const expectedTokenRequestBalance = ROOT_TOKEN_AMOUNT
         const expectedNextTokenRequestId = 1
 
         await mockErc20.approve(tokenRequest.address, ROOT_TOKEN_AMOUNT, {
@@ -166,11 +166,11 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         const actualNextTokenRequestId = await tokenRequest.nextTokenRequestId()
 
-        assert.equal(actualTRBalance, expectedTRBalance)
+        assert.equal(actualTRBalance, expectedTokenRequestBalance)
         assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId)
       })
 
-      it('should not create a new request without token apporove', async () => {
+      it('should not create a new request without token approve', async () => {
         await assertRevert(
           tokenRequest.createTokenRequest(mockErc20.address, 100, 1),
           'TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED'
@@ -266,6 +266,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
     })
 
     describe('refundTokenRequest(uint256 _tokenRequestId) ', () => {
+      const refundEthAccount = accounts[2]
       it('refund token (ERC20)', async () => {
         const refundAmount = 100
         const expectedUserBalance = await mockErc20.balanceOf(rootAccount)
@@ -284,22 +285,23 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
       })
 
       it('refund ETH', async () => {
-        const expectedETHBalance = await web3.eth.getBalance(accounts[2])
+        const weiValue = 3000000000000000
+        const expectedETHBalance = await web3.eth.getBalance(refundEthAccount)
 
-        const request = await tokenRequest.createTokenRequest(ETH_ADDRESS, 3000000000000000, 1, {
-          value: 3000000000000000,
-          from: accounts[2],
+        const request = await tokenRequest.createTokenRequest(ETH_ADDRESS, weiValue, 1, {
+          value: weiValue,
+          from: refundEthAccount,
         })
 
         const tx = await web3.eth.getTransaction(request.tx)
         const requestPrice = request.receipt.gasUsed * tx.gasPrice
 
-        const refund = await tokenRequest.refundTokenRequest(0, { from: accounts[2] })
+        const refund = await tokenRequest.refundTokenRequest(0, { from: refundEthAccount })
 
         const tx2 = await web3.eth.getTransaction(refund.tx)
         const refundPrice = refund.receipt.gasUsed * tx2.gasPrice
 
-        const actualBalance = await web3.eth.getBalance(accounts[2])
+        const actualBalance = await web3.eth.getBalance(refundEthAccount)
         const actualETHBalance = Number(actualBalance) + refundPrice + requestPrice
 
         assert.equal(actualETHBalance, expectedETHBalance)
@@ -317,14 +319,15 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
       })
 
       it('should not refund the same request twice', async () => {
-        await tokenRequest.createTokenRequest(ETH_ADDRESS, 1000000000000000, 1, {
-          value: 1000000000000000,
-          from: accounts[2],
+        const weiValue = 1000000000000000
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, weiValue, 1, {
+          value: weiValue,
+          from: refundEthAccount,
         })
 
-        await tokenRequest.refundTokenRequest(0, { from: accounts[2] })
+        await tokenRequest.refundTokenRequest(0, { from: refundEthAccount })
 
-        await assertRevert(tokenRequest.refundTokenRequest(0, { from: accounts[2] }), 'TOKEN_REQUEST_NOT_OWNER')
+        await assertRevert(tokenRequest.refundTokenRequest(0, { from: refundEthAccount }), 'TOKEN_REQUEST_NOT_OWNER')
       })
     })
   })
