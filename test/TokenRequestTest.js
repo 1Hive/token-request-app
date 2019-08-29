@@ -1,8 +1,9 @@
 const { encodeCallScript } = require('@aragon/test-helpers/evmScript')
 const getBalanceFn = require('@aragon/test-helpers/balance')
-
 import DaoDeployment from './helpers/DaoDeployment'
 import { deployedContract, assertRevert } from './helpers/helpers'
+import { BN } from 'bn.js'
+
 const ForwarderMock = artifacts.require('ForwarderMock')
 const MiniMeToken = artifacts.require('MiniMeToken')
 const MiniMeTokenFactory = artifacts.require('MiniMeTokenFactory')
@@ -284,7 +285,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         assert.equal(Number(actualUserBalance), Number(expectedUserBalance))
       })
 
-      it.only('refund ETH', async () => {
+      it('refund ETH', async () => {
         const weiValue = 3000000000000000
         const expectedETHBalance = await web3.eth.getBalance(refundEthAccount)
 
@@ -294,15 +295,20 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         })
 
         const requestTransaction = await web3.eth.getTransaction(request.tx)
-        const requestPrice = request.receipt.gasUsed * requestTransaction.gasPrice
+        let requestPrice = new BN()
+        const requestGasUsed = new BN(request.receipt.gasUsed)
+        const requestTransactionGasPrice = new BN(requestTransaction.gasPrice)
+        requestPrice = requestGasUsed.mul(requestTransactionGasPrice)
 
         const refund = await tokenRequest.refundTokenRequest(0, { from: refundEthAccount })
-
         const refundTransaction = await web3.eth.getTransaction(refund.tx)
-        const refundPrice = refund.receipt.gasUsed * refundTransaction.gasPrice
+        let refundPrice = new BN()
+        const refundGasUsed = new BN(refund.receipt.gasUsed)
+        const refundGasPrice = new BN(refundTransaction.gasPrice)
+        refundPrice = refundGasUsed.mul(refundGasPrice)
 
-        const actualBalance = await web3.eth.getBalance(refundEthAccount)
-        const actualETHBalance = Number(actualBalance) + refundPrice + requestPrice
+        let actualBalance = new BN(await web3.eth.getBalance(refundEthAccount))
+        const actualETHBalance = actualBalance.add(refundPrice).add(requestPrice)
 
         assert.equal(actualETHBalance, expectedETHBalance)
       })
