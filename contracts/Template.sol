@@ -107,9 +107,7 @@ contract Template is TemplateBase {
         acl.createPermission(voting, tokenRequest, tokenRequest.FINALISE_TOKEN_REQUEST_ROLE(), root);
         acl.createPermission(this, tokenManager, tokenManager.MINT_ROLE(), this);
         acl.grantPermission(tokenRequest, tokenManager, tokenManager.MINT_ROLE());
-        acl.createPermission(this, tokenRequest,tokenRequest.ADD_TOKEN_ROLE(), this);
         acl.grantPermission(tokenRequest, voting, voting.CREATE_VOTES_ROLE());
-        acl.createPermission(root, tokenRequest, tokenRequest.SUBMIT_TOKEN_REQUEST_ROLE(), root);
 
         //acl.createPermission(tokenRequest, tokenManager, tokenManager.MINT_ROLE(), root);
 
@@ -137,7 +135,7 @@ contract Template is TemplateBase {
     function initApps(Vault vault, TokenManager tokenManager, TokenRequest tokenRequest, Voting voting, MiniMeToken token, uint256 timeToExpiry) internal { 
         vault.initialize();
         tokenManager.initialize(token, true, 0);
-        tokenRequest.initialize(tokenManager, vault, timeToExpiry);
+        tokenRequest.initialize(tokenManager, vault, timeToExpiry, new address[](0));
         voting.initialize(token, 50 * PCT, 20 * PCT, 1 days);
     }
 
