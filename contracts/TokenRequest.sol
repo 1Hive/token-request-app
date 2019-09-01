@@ -35,6 +35,9 @@ contract TokenRequest is AragonApp {
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
 
+    uint256 public constant MAX_ACCEPTED_DEPOSIT_TOKENS = 100;
+    uint256 public constant MAX_ADDRESS_TOKEN_REQUEST_IDS = 100;
+
     struct TokenRequest {
         address requesterAddress;
         address depositToken;
@@ -43,13 +46,10 @@ contract TokenRequest is AragonApp {
         uint64 timeCreated;
     }
 
-    uint256 public constant MAX_ACCEPTED_TOKENS = 100;
-    uint256 public constant MAX_ADDRESS_TOKEN_REQUEST_IDS = 100;
-
     TokenManager public tokenManager;
     address public vault;
 
-    address[] public acceptedTokens;
+    address[] public acceptedDepositTokens;
 
     uint256 public nextTokenRequestId;
     mapping(uint256 => TokenRequest) public tokenRequests; // ID => TokenRequest
@@ -63,12 +63,12 @@ contract TokenRequest is AragonApp {
     event TokenAdded(address indexed token);
     event TokenRemoved(address indexed token);
 
-    function initialize(address _tokenManager, address _vault, address[] _acceptedTokens) external onlyInit {
-        require(_acceptedTokens.length <= MAX_ACCEPTED_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
+    function initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens) external onlyInit {
+        require(_acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
 
         tokenManager = TokenManager(_tokenManager);
         vault = _vault;
-        acceptedTokens = _acceptedTokens;
+        acceptedDepositTokens = _acceptedDepositTokens;
 
         initialized();
     }
@@ -92,25 +92,25 @@ contract TokenRequest is AragonApp {
     }
 
     /**
-    * @notice Add `_token.symbol(): string` to the accepted token request tokens
+    * @notice Add `_token.symbol(): string` to the accepted deposit token request tokens
     * @param _token token address
     */
     function addToken(address _token) external auth(MODIFY_TOKENS_ROLE) {
         require(isContract(_token), ERROR_ADDRESS_NOT_CONTRACT);
-        require(!acceptedTokens.contains(_token), ERROR_TOKEN_ALREADY_ACCEPTED);
+        require(!acceptedDepositTokens.contains(_token), ERROR_TOKEN_ALREADY_ACCEPTED);
 
-        acceptedTokens.push(_token);
-        require(acceptedTokens.length <= MAX_ACCEPTED_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
+        acceptedDepositTokens.push(_token);
+        require(acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
 
         emit TokenAdded(_token);
     }
 
     /**
-    * @notice Remove `_token.symbol(): string` from the accepted token request tokens
+    * @notice Remove `_token.symbol(): string` from the accepted deposit token request tokens
     * @param _token token address
     */
     function removeToken(address _token) external auth(MODIFY_TOKENS_ROLE) {
-        require(acceptedTokens.deleteItem(_token), ERROR_TOKEN_NOT_ACCEPTED);
+        require(acceptedDepositTokens.deleteItem(_token), ERROR_TOKEN_NOT_ACCEPTED);
 
         emit TokenRemoved(_token);
     }
@@ -127,7 +127,7 @@ contract TokenRequest is AragonApp {
     payable
     returns (uint256)
     {
-        require(acceptedTokens.contains(_depositToken), ERROR_TOKEN_NOT_ACCEPTED);
+        require(acceptedDepositTokens.contains(_depositToken), ERROR_TOKEN_NOT_ACCEPTED);
         require(addressesTokenRequestIds[msg.sender].length < MAX_ADDRESS_TOKEN_REQUEST_IDS, ERROR_TOO_MANY_TOKEN_REQUESTS);
         require(_depositAmount > 0, ERROR_NO_AMOUNT);
 
@@ -208,8 +208,8 @@ contract TokenRequest is AragonApp {
         emit TokenRequestFinalised(_tokenRequestId, requesterAddress, depositToken, depositAmount, requestAmount);
     }
 
-    function getAcceptedTokens() public view returns (address[]) {
-        return acceptedTokens;
+    function getAcceptedDepositTokens() public view returns (address[]) {
+        return acceptedDepositTokens;
     }
 
     function getTokenRequest(uint256 _tokenRequestId) public view
