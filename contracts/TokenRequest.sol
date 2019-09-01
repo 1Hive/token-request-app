@@ -43,7 +43,6 @@ contract TokenRequest is AragonApp {
         address depositToken;
         uint256 depositAmount;
         uint256 requestAmount;
-        uint64 timeCreated;
     }
 
     TokenManager public tokenManager;
@@ -140,7 +139,7 @@ contract TokenRequest is AragonApp {
         uint256 tokenRequestId = nextTokenRequestId;
         nextTokenRequestId++;
 
-        tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount, getTimestamp64());
+        tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount);
         addressesTokenRequestIds[msg.sender].push(tokenRequestId);
 
         emit TokenRequestCreated(tokenRequestId, msg.sender, _depositToken, _depositAmount, _requestAmount);
@@ -217,8 +216,7 @@ contract TokenRequest is AragonApp {
         address requesterAddress,
         address depositToken,
         uint256 depositAmount,
-        uint256 requestAmount,
-        uint64 timeCreated
+        uint256 requestAmount
         )
     {
         TokenRequest storage tokenRequest = tokenRequests[_tokenRequestId];
@@ -227,7 +225,6 @@ contract TokenRequest is AragonApp {
         depositToken = tokenRequest.depositToken;
         depositAmount = tokenRequest.depositAmount;
         requestAmount = tokenRequest.requestAmount;
-        timeCreated = tokenRequest.timeCreated;
     }
 
 }
