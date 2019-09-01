@@ -36,7 +36,7 @@ contract('TokenRequest', ([rootAccount, vault, ...accounts]) => {
     describe('initialize(address _tokenManager, address _vault)', () => {
 
         beforeEach(async () => {
-            await tokenRequest.initialize(tokenManager.address, vault)
+            await tokenRequest.initialize(tokenManager.address, vault, [])
         })
 
         it('sets correct variables', async () => {

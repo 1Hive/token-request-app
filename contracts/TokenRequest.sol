@@ -56,11 +56,11 @@ contract TokenRequest is AragonApp {
 
     event SetTokenManager(address tokenManager);
     event SetVault(address vault);
+    event TokenAdded(address indexed token);
+    event TokenRemoved(address indexed token);
     event TokenRequestCreated(uint256 requestId, address requesterAddress, address depositToken, uint256 depositAmount, uint256 requestAmount);
     event TokenRequestRefunded(uint256 requestId, address refundToAddress, address refundToken, uint256 refundAmount);
     event TokenRequestFinalised(uint256 requestId, address requester, address depositToken, uint256 depositAmount, uint256 requestAmount);
-    event TokenAdded(address indexed token);
-    event TokenRemoved(address indexed token);
 
     function initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens) external onlyInit {
         require(_acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
@@ -217,7 +217,7 @@ contract TokenRequest is AragonApp {
         address depositToken,
         uint256 depositAmount,
         uint256 requestAmount
-        )
+    )
     {
         TokenRequest storage tokenRequest = tokenRequests[_tokenRequestId];
 
