@@ -23,15 +23,17 @@ contract TokenRequest is AragonApp {
     bytes32 constant public SET_VAULT_ROLE = keccak256("SET_VAULT_ROLE");
     bytes32 constant public FINALISE_TOKEN_REQUEST_ROLE = keccak256("FINALISE_TOKEN_REQUEST_ROLE");
     bytes32 constant public MODIFY_TOKENS_ROLE = keccak256("MODIFY_TOKENS_ROLE");
-    bytes32 constant public SET_EXPIRY_TIME_ROLE = keccak256("SET_EXPIRY_TIME_ROLE");
 
+    string private constant ERROR_TOO_MANY_ACCEPTED_TOKENS = "TOKEN_REQUEST_TOO_MANY_ACCEPTED_TOKENS";
+    string private constant ERROR_TOO_MANY_TOKEN_REQUESTS = "TOKEN_REQUEST_TOO_MANY_TOKEN_REQUESTS";
+    string private constant ERROR_TOKEN_ALREADY_ACCEPTED= "TOKEN_REQUEST_TOKEN_ALREADY_ACCEPTED";
+    string private constant ERROR_TOKEN_NOT_ACCEPTED = "TOKEN_REQUEST_TOKEN_NOT_ACCEPTED";
+    string private constant ERROR_ADDRESS_NOT_CONTRACT = "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT";
     string private constant ERROR_NO_AMOUNT = "TOKEN_REQUEST_NO_AMOUNT";
     string private constant ERROR_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
     string private constant ERROR_NO_DEPOSIT = "TOKEN_REQUEST_NO_DEPOSIT";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
-    string private constant ERROR_TOKEN_ALREADY_ADDED = "TOKEN_REQUEST_TOKEN_ALREADY_ADDED";
-    string private constant ERROR_TOKEN_DOES_NOT_EXIST = "TOKEN_REQUEST_TOKEN_DOES_NOT_EXIST";
 
     struct TokenRequest {
         address requesterAddress;
@@ -41,29 +43,31 @@ contract TokenRequest is AragonApp {
         uint64 timeCreated;
     }
 
+    uint256 public constant MAX_ACCEPTED_TOKENS = 100;
+    uint256 public constant MAX_ADDRESS_TOKEN_REQUEST_IDS = 100;
+
     TokenManager public tokenManager;
     address public vault;
 
-    mapping(address => bool) public tokenAdded;
     address[] public acceptedTokens;
-
-    uint256 public expiryTime;
 
     uint256 public nextTokenRequestId;
     mapping(uint256 => TokenRequest) public tokenRequests; // ID => TokenRequest
     mapping(address => uint256[]) public addressesTokenRequestIds; // Sender address => List of ID's
 
+    event SetTokenManager(address tokenManager);
+    event SetVault(address vault);
     event TokenRequestCreated(uint256 requestId, address requesterAddress, address depositToken, uint256 depositAmount, uint256 requestAmount);
     event TokenRequestRefunded(uint256 requestId, address refundToAddress, address refundToken, uint256 refundAmount);
     event TokenRequestFinalised(uint256 requestId, address requester, address depositToken, uint256 depositAmount, uint256 requestAmount);
-    event AddToken(address indexed token);
-    event RemoveToken(address indexed token);
-    event SetTimeToExpiry(uint256 timeToExpiry);
+    event TokenAdded(address indexed token);
+    event TokenRemoved(address indexed token);
 
-    function initialize(address _tokenManager, address _vault, uint256 _expiryTime, address[] _acceptedTokens) external onlyInit {
+    function initialize(address _tokenManager, address _vault, address[] _acceptedTokens) external onlyInit {
+        require(_acceptedTokens.length <= MAX_ACCEPTED_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
+
         tokenManager = TokenManager(_tokenManager);
         vault = _vault;
-        expiryTime = _expiryTime;
         acceptedTokens = _acceptedTokens;
 
         initialized();
@@ -75,6 +79,7 @@ contract TokenRequest is AragonApp {
     */
     function setTokenManager(address _tokenManager) external auth(SET_TOKEN_MANAGER_ROLE) {
         tokenManager = TokenManager(_tokenManager);
+        emit SetTokenManager(_tokenManager);
     }
 
     /**
@@ -83,15 +88,7 @@ contract TokenRequest is AragonApp {
     */
     function setVault(address _vault) external auth(SET_VAULT_ROLE) {
         vault = _vault;
-    }
-
-    /**
-    * @notice Set Token Request expiry time to `@transformTime(_expiryTime, 'seconds')`
-    * @param _expiryTime The new expiry time in seconds
-    */
-    function setExpiryTime(uint256 _expiryTime) external auth(SET_EXPIRY_TIME_ROLE) {
-        expiryTime = _expiryTime;
-        emit SetTimeToExpiry(expiryTime);
+        emit SetVault(_vault);
     }
 
     /**
@@ -99,12 +96,13 @@ contract TokenRequest is AragonApp {
     * @param _token token address
     */
     function addToken(address _token) external auth(MODIFY_TOKENS_ROLE) {
-        require(!tokenAdded[_token], ERROR_TOKEN_ALREADY_ADDED);
+        require(isContract(_token), ERROR_ADDRESS_NOT_CONTRACT);
+        require(!acceptedTokens.contains(_token), ERROR_TOKEN_ALREADY_ACCEPTED);
 
-        tokenAdded[_token] = true;
         acceptedTokens.push(_token);
+        require(acceptedTokens.length <= MAX_ACCEPTED_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
 
-        emit AddToken(_token);
+        emit TokenAdded(_token);
     }
 
     /**
@@ -112,12 +110,9 @@ contract TokenRequest is AragonApp {
     * @param _token token address
     */
     function removeToken(address _token) external auth(MODIFY_TOKENS_ROLE) {
-        require(tokenAdded[_token], ERROR_TOKEN_DOES_NOT_EXIST);
+        require(acceptedTokens.deleteItem(_token), ERROR_TOKEN_NOT_ACCEPTED);
 
-        tokenAdded[_token] = false;
-        acceptedTokens.deleteItem(_token);
-
-        emit RemoveToken(_token);
+        emit TokenRemoved(_token);
     }
 
     /**
@@ -132,6 +127,8 @@ contract TokenRequest is AragonApp {
     payable
     returns (uint256)
     {
+        require(acceptedTokens.contains(_depositToken), ERROR_TOKEN_NOT_ACCEPTED);
+        require(addressesTokenRequestIds[msg.sender].length < MAX_ADDRESS_TOKEN_REQUEST_IDS, ERROR_TOO_MANY_TOKEN_REQUESTS);
         require(_depositAmount > 0, ERROR_NO_AMOUNT);
 
         if (_depositToken == ETH) {
@@ -206,6 +203,8 @@ contract TokenRequest is AragonApp {
 
         tokenManager.mint(requesterAddress, requestAmount);
 
+        addressesTokenRequestIds[msg.sender].deleteItem(_tokenRequestId);
+
         emit TokenRequestFinalised(_tokenRequestId, requesterAddress, depositToken, depositAmount, requestAmount);
     }
 
@@ -219,7 +218,8 @@ contract TokenRequest is AragonApp {
         address depositToken,
         uint256 depositAmount,
         uint256 requestAmount,
-        uint64 timeCreated )
+        uint64 timeCreated
+        )
     {
         TokenRequest storage tokenRequest = tokenRequests[_tokenRequestId];
 
