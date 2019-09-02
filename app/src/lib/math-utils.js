@@ -118,3 +118,7 @@ export function safeDiv(num, denom) {
 export function toHours(ms) {
   return ms / 3600000
 }
+
+export function hoursToMs(hours) {
+  return hours * 3600000
+}
