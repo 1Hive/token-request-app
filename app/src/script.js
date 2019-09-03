@@ -2,9 +2,6 @@ import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
 import { first } from 'rxjs/operators'
-import tokenDecimalsAbi from './abi/token-decimals.json'
-import tokenNameAbi from './abi/token-name.json'
-import tokenSymbolAbi from './abi/token-symbol.json'
 import tmAbi from './abi/tokenManager.json'
 import { requestStatus } from './lib/constants'
 import {
@@ -14,8 +11,6 @@ import {
   getTokenName,
   getTokenDecimals,
 } from './lib/token-utils'
-
-const tokenAbi = [].concat(tokenDecimalsAbi, tokenNameAbi, tokenSymbolAbi)
 
 const app = new Aragon()
 
@@ -34,7 +29,7 @@ async function initialize(tokenManagerAddress) {
     .pipe(first())
     .toPromise()
   const tmContract = app.external(tokenManagerAddress, tmAbi)
-  tokens = await app.call('getAcceptedTokenList').toPromise()
+  tokens = await app.call('getAcceptedDepositTokens').toPromise()
   tokens.unshift(ETHER_TOKEN_FAKE_ADDRESS)
 
   const settings = {
@@ -85,7 +80,6 @@ function initializeState(state, tokenManagerContract, tokens, settings) {
       const minimeAddress = await tokenManagerContract.token().toPromise()
       const token = await getTokenData(minimeAddress, settings)
       const acceptedTokens = await getAcceptedTokens(tokens, settings)
-      const timeToExpiry = await app.call('timeToExpiry').toPromise()
 
       token && app.indentify(`token-request ${token.symbol}`)
 
@@ -95,7 +89,6 @@ function initializeState(state, tokenManagerContract, tokens, settings) {
         token,
         acceptedTokens: acceptedTokens,
         requests: [],
-        timeToExpiry,
       }
     } catch (error) {
       console.error('Error initializing state: ', error)

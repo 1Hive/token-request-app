@@ -57,32 +57,19 @@ export function useWithdrawAction(onDone) {
 }
 
 const useRequests = () => {
-  const { requests, timeToExpiry } = useAppState()
-  const now = useNow()
-  const requestsExpired = (requests || []).map(request => {
-    return hasExpired(request.date, now, timeToExpiry)
-  })
+  const { requests } = useAppState()
 
-  const requestStatusKey = requestsExpired.join('')
   return useMemo(
     () =>
       (requests || []).map((request, index) => ({
         ...request,
-        status:
-          requests[index].status === requestStatus.PENDING && requestsExpired[index]
-            ? requestStatus.EXPIRED
-            : requests[index].status,
-        actionDate:
-          requests[index].status === requestStatus.PENDING && requestsExpired[index]
-            ? requests[index].date + hoursToMs(timeToExpiry)
-            : requests[index].actionDate,
       })),
-    [requests, requestStatusKey]
+    [requests]
   )
 }
 
 export function useAppLogic() {
-  const { acceptedTokens, account, token, isSyncing, ready, timeToExpiry } = useAppState()
+  const { acceptedTokens, account, token, isSyncing, ready } = useAppState()
   const requests = useRequests()
   const panelState = useSidePanel()
 
@@ -98,7 +85,6 @@ export function useAppLogic() {
     acceptedTokens,
     account,
     token,
-    timeToExpiry,
     actions,
     requests,
   }

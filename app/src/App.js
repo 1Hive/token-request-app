@@ -20,7 +20,7 @@ const useRequests = (req, connectedAccount) => {
 }
 
 const App = () => {
-  const { panelState, isSyncing, acceptedTokens, account, token, timeToExpiry, actions, requests } = useAppLogic()
+  const { panelState, isSyncing, acceptedTokens, account, token, actions, requests } = useAppLogic()
   const [screenIndex, setScreenIndex] = useState(0)
   const [userRequests, setUserRequests] = useState()
 
@@ -84,19 +84,12 @@ const App = () => {
           <Tabs items={['Requests', 'My Requests']} selected={screenIndex} onChange={handleTabChange} />
         </TabsWrapper>
         {screenIndex === 0 && (
-          <Requests
-            requests={requests}
-            token={token}
-            timeToExpiry={timeToExpiry}
-            onSubmit={handleSubmit}
-            onWithdraw={handleWithdraw}
-          ></Requests>
+          <Requests requests={requests} token={token} onSubmit={handleSubmit} onWithdraw={handleWithdraw}></Requests>
         )}
         {screenIndex === 1 && (
           <Requests
             requests={userRequests}
             token={token}
-            timeToExpiry={timeToExpiry}
             onSubmit={handleSubmit}
             onWithdraw={handleWithdraw}
           ></Requests>

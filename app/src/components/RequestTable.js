@@ -8,7 +8,7 @@ import { requestStatus } from '../lib/constants'
 
 const PAGINATION = 10
 
-function RequestTable({ requests, token, timeToExpiry, onSubmit, onWithdraw }) {
+function RequestTable({ requests, token, onSubmit, onWithdraw }) {
   const handleSubmit = useCallback(
     requestId => {
       onSubmit(requestId)
@@ -23,16 +23,6 @@ function RequestTable({ requests, token, timeToExpiry, onSubmit, onWithdraw }) {
     [onWithdraw]
   )
 
-  const renderExpirationTime = (date, timeToExpiry, status, actionDate) => {
-    if (status === requestStatus.PENDING) {
-      const endDateMs = date + hoursToMs(timeToExpiry)
-      const end = new Date(endDateMs)
-
-      return <Timer end={end} />
-    } else {
-      return <time>{format(actionDate, 'dd/MM/yy')}</time>
-    }
-  }
   return (
     <>
       {requests && requests.length > 0 && (
@@ -74,7 +64,7 @@ function RequestTable({ requests, token, timeToExpiry, onSubmit, onWithdraw }) {
             <time>{format(date, 'dd/MM/yy')}</time>,
             <Text>{`${formatTokenAmountSymbol(depositSymbol, depositAmount, false, depositDecimals)} `}</Text>,
             <Text>{`${formatTokenAmountSymbol(requestedSymbol, requestedAmount, false, requestedDecimals)} `}</Text>,
-            renderExpirationTime(date, timeToExpiry, status, actionDate),
+            <time>{format(actionDate, 'dd/MM/yy')}</time>,
             <Status status={status}>{`${status}`}</Status>,
             <ContextMenu>
               {status === requestStatus.PENDING && (
