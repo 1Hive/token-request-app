@@ -1,6 +1,6 @@
 {
-  "name": "Application",
-  "description": "An application for Aragon",
+  "name": "Token Request",
+  "description": "Requests an Organization's tokens in exchange for payment",
   "icons": [
     {
       "src": "/images/icon.png",
