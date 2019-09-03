@@ -86,7 +86,10 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
   describe('initialize(address _tokenManager, address _vault)', () => {
     beforeEach(async () => {
-      await tokenRequest.initialize(tokenManager.address, vault.address)
+      let acceptedDepositTokens = new Array(2)
+      acceptedDepositTokens[0] = requestableToken.address
+      acceptedDepositTokens[1] = ETH_ADDRESS
+      await tokenRequest.initialize(tokenManager.address, vault.address, acceptedDepositTokens)
     })
 
     it('sets correct variables', async () => {
