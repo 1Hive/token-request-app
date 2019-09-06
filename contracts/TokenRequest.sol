@@ -115,7 +115,7 @@ contract TokenRequest is AragonApp {
     }
 
     /**
-    * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, _depositToken.decimals(): uint256)` in exchange for `@tokenAmount(self.tokenManager().token(): address, _requestAmount, true, self.tokenManager().token().decimals(): uint256)`
+    * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, _depositToken.decimals(): uint256)` in exchange for `@tokenAmount(self.getToken(): address, _requestAmount, true, 18)`
     * @dev Note the above radspec string seems to need to be on a single line. When split compile errors occur.
     * @param _depositToken Address of the token being deposited
     * @param _depositAmount Amount of the token being deposited
@@ -225,6 +225,10 @@ contract TokenRequest is AragonApp {
         depositToken = tokenRequest.depositToken;
         depositAmount = tokenRequest.depositAmount;
         requestAmount = tokenRequest.requestAmount;
+    }
+
+    function getToken() internal returns (address) {
+        return tokenManager.token();
     }
 
 }
