@@ -196,7 +196,6 @@ function NewRequest({ network, panelOpened, onRequest }) {
   const validateInputs = ({ amount, selectedToken } = {}) => {
     amount = amount || depositedAmount
     selectedToken = selectedToken || selectedTokenData
-    console.log('AMOUUUU ', amount)
     if (selectedToken) {
       if (amount.value && selectedToken.decimals) {
         // Adjust but without truncation in case the user entered a value with more
