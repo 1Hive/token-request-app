@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
-import { Button, Field, Text, TextInput, theme, GU } from '@aragon/ui'
+import { Button, Field, Text, TextInput, theme, GU, IconCross, useTheme, textStyle, Info, Link } from '@aragon/ui'
 import { useAppState } from '@aragon/api-react'
 import { useAragonApi, useApi } from '@aragon/api-react'
 import TokenSelector from '../TokenSelector'
@@ -10,25 +10,47 @@ import { ETHER_TOKEN_FAKE_ADDRESS, tokenDataFallback, getTokenSymbol } from '../
 import tokenBalanceOfAbi from '../../abi/token-balanceof.json'
 import tokenDecimalsAbi from '../../abi/token-decimals.json'
 import tokenSymbolAbi from '../../abi/token-symbol.json'
+import { BN } from 'bn.js'
 
+const TOKEN_ALLOWANCE_WEBSITE = 'https://tokenallowance.io/'
 const NO_ERROR = Symbol('NO_ERROR')
+const BALANCE_NOT_ENOUGH_ERROR = Symbol('BALANCE_NOT_ENOUGH_ERROR')
+const DECIMALS_TOO_MANY_ERROR = Symbol('DECIMALS_TOO_MANY_ERROR')
+
 const tokenAbi = [].concat(tokenBalanceOfAbi, tokenDecimalsAbi, tokenSymbolAbi)
 
-function NewRequest({ network, panelOpened, onRequest }) {
-  const { acceptedTokens, account, token } = useAppState()
-  const api = useApi()
-
-  const [amount, setAmount] = useState('')
-  const [selectedToken, setSelectedToken] = useState({
+const initialState = {
+  amount: {
+    error: NO_ERROR,
+    value: '',
+  },
+  selectedToken: {
     coerced: false, // whether the token was coerced from a symbol to an address
     error: NO_ERROR,
     index: -1,
     value: '',
-  })
+  },
+  selectedTokenData: {
+    loading: false,
+  },
+  depositErrorMessage: '',
+  submitButtonDisabled: false,
+  isTokenSelected: false,
+}
 
-  const [selectedTokenData, setSelectedTokenData] = useState()
+function NewRequest({ network, panelOpened, onRequest }) {
+  const { acceptedTokens, account, token } = useAppState()
+  const api = useApi()
+  const isMainnet = network.type === 'main'
+
+  const [selectedToken, setSelectedToken] = useState({ ...initialState.selectedToken })
+  const [depositedAmount, setDepositedAmount] = useState({ ...initialState.amount })
+  const [selectedTokenData, setSelectedTokenData] = useState({ ...initialState.selectedTokenData })
   const [requestedAmount, setRequestedAmount] = useState('')
   const [tokenBalanceMessage, setTokenBalanceMessage] = useState('')
+  const [depositErrorMessage, setDepositErrorMessage] = useState(initialState.depositErrorMessage)
+  const [submitButtonDisabled, setSubmitButtonDisabled] = useState(initialState.submitButtonDisabled)
+  const [isTokenSelected, setIsTokenSelected] = useState(initialState.isTokenSelected)
 
   useEffect(() => {
     async function getSelectedTokenData() {
@@ -38,22 +60,33 @@ function NewRequest({ network, panelOpened, onRequest }) {
     }
     if (selectedToken.index != -1) {
       getSelectedTokenData()
+      const ethSelected =
+        isAddress(selectedToken.value) && addressesEqual(selectedToken.value, ETHER_TOKEN_FAKE_ADDRESS)
+      const tokenSelected = selectedToken.value && !ethSelected
+      setIsTokenSelected(tokenSelected)
     }
   }, [selectedToken.index])
 
   useEffect(() => {
     if (!panelOpened) {
-      setSelectedToken({
-        coerced: false,
-        error: NO_ERROR,
-        index: -1,
-        value: '',
-      })
-      setAmount('')
+      setSelectedToken({ ...initialState.selectedToken })
+      setDepositedAmount({ ...initialState.amount })
       setRequestedAmount('')
       setTokenBalanceMessage('')
     }
   }, [panelOpened])
+
+  useEffect(() => {
+    let errorMessage
+    if (depositedAmount.error === BALANCE_NOT_ENOUGH_ERROR) {
+      errorMessage = 'Amount is greater than balance held'
+    } else if (depositedAmount.error === DECIMALS_TOO_MANY_ERROR) {
+      errorMessage = 'Amount contains too many decimal places'
+    }
+    const disabled = !!errorMessage || !(selectedToken.value && !selectedTokenData.loading)
+    setDepositErrorMessage(errorMessage)
+    setSubmitButtonDisabled(disabled)
+  }, [depositedAmount, selectedToken, selectedTokenData])
 
   const renderBalanceForSelectedToken = selectedToken => {
     const { decimals, loading, symbol, userBalance } = selectedToken
@@ -69,21 +102,29 @@ function NewRequest({ network, panelOpened, onRequest }) {
   const handleFormSubmit = useCallback(
     e => {
       e.preventDefault()
-      const depositAmount = toDecimals(amount, selectedTokenData.decimals)
+      const depositAmount = toDecimals(depositedAmount.value, selectedTokenData.decimals)
       const requested = toDecimals(requestedAmount, Number(token.decimals))
 
       onRequest(selectedToken.value, depositAmount, requested)
     },
-    [onRequest, token, selectedTokenData, amount, requestedAmount]
+    [onRequest, token, selectedTokenData, depositedAmount, requestedAmount]
   )
 
   const handleRequestedAmountUpdate = useCallback(e => {
     setRequestedAmount(e.target.value)
   })
 
-  const handleAmountUpdate = useCallback(e => {
-    setAmount(e.target.value)
-  })
+  const handleAmountUpdate = useCallback(
+    e => {
+      validateInputs({
+        amount: {
+          value: e.target.value,
+        },
+      })
+      // setAmount({ value: e.target.value, error: NO_ERROR })
+    },
+    [depositedAmount]
+  )
 
   const handleSelectedToken = useCallback(({ address, index, value }) => {
     const tokenIsAddress = isAddress(address)
@@ -152,6 +193,35 @@ function NewRequest({ network, panelOpened, onRequest }) {
     return tokenData
   }
 
+  const validateInputs = ({ amount, selectedToken } = {}) => {
+    amount = amount || depositedAmount
+    selectedToken = selectedToken || selectedTokenData
+    console.log('AMOUUUU ', amount)
+    if (selectedToken) {
+      if (amount.value && selectedToken.decimals) {
+        // Adjust but without truncation in case the user entered a value with more
+        // decimals than possible
+        const adjustedAmount = toDecimals(amount.value, selectedToken.decimals, {
+          truncate: false,
+        })
+
+        if (adjustedAmount.indexOf('.') !== -1) {
+          setDepositedAmount({ ...amount, error: DECIMALS_TOO_MANY_ERROR })
+          return false
+        }
+
+        if (selectedToken.userBalance && new BN(adjustedAmount).gt(new BN(selectedToken.userBalance))) {
+          setDepositedAmount({ ...amount, error: BALANCE_NOT_ENOUGH_ERROR })
+          return false
+        }
+      }
+    }
+
+    setDepositedAmount({ ...amount, error: NO_ERROR })
+    return true
+  }
+
+  console.log('AMOUNTTTTT ', depositedAmount)
   return (
     <form
       onSubmit={handleFormSubmit}
@@ -166,7 +236,14 @@ function NewRequest({ network, panelOpened, onRequest }) {
         </Text>
       </TokenBalance>
       <Field label="Amount">
-        <TextInput.Number value={amount} onChange={handleAmountUpdate} min={0} step="any" required wide />
+        <TextInput.Number
+          value={depositedAmount.value}
+          onChange={handleAmountUpdate}
+          min={0}
+          step="any"
+          required
+          wide
+        />
       </Field>
       <Field label="Requested Amount">
         <TextInput.Number
@@ -179,10 +256,37 @@ function NewRequest({ network, panelOpened, onRequest }) {
         />
       </Field>
       <ButtonWrapper>
-        <Button wide mode="strong" type="submit" disabled={false}>
+        <Button wide mode="strong" type="submit" disabled={submitButtonDisabled}>
           Submit request
         </Button>
       </ButtonWrapper>
+      {depositErrorMessage && <ValidationError message={depositErrorMessage} />}
+      <VSpace size={3} />
+      <Info>
+        {isMainnet && (
+          <p>
+            Remember, Mainnet organizations use <strong>real tokens</strong>.
+          </p>
+        )}
+        <p>
+          Configure your request above, and sign the transaction with your wallet after clicking “Submit Transfer”. It
+          will then show up in your Token request app once processed.
+        </p>
+        {isTokenSelected && (
+          <React.Fragment>
+            <p
+              css={`
+                margin-top: ${1 * GU}px;
+              `}
+            >
+              Tokens may require a pretransaction to approve the Token request app for your deposit.{' '}
+              <Link href={TOKEN_ALLOWANCE_WEBSITE} target="_blank">
+                Find out why.
+              </Link>{' '}
+            </p>
+          </React.Fragment>
+        )}
+      </Info>
     </form>
   )
 }
@@ -199,17 +303,35 @@ const VSpace = styled.div`
   height: ${p => (p.size || 1) * 5}px;
 `
 
-const ValidationError = ({ message }) => (
-  <div>
-    <VSpace size={3} />
-    <p>
-      <IconCross />
-      <Text size="small" style={{ marginLeft: '10px' }}>
-        {message}
-      </Text>
-    </p>
-  </div>
-)
+const ValidationError = ({ message }) => {
+  const theme = useTheme()
+  return (
+    <div>
+      <VSpace size={2} />
+      <div
+        css={`
+          display: flex;
+          align-items: center;
+        `}
+      >
+        <IconCross
+          size="tiny"
+          css={`
+            color: ${theme.negative};
+            margin-right: ${1 * GU}px;
+          `}
+        />
+        <span
+          css={`
+            ${textStyle('body3')}
+          `}
+        >
+          {message}
+        </span>
+      </div>
+    </div>
+  )
+}
 
 export default props => {
   const { api, connectedAccount, network } = useAragonApi()
