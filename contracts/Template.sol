@@ -19,6 +19,7 @@ import "@aragon/apps-voting/contracts/Voting.sol";
 import "@aragon/apps-vault/contracts/Vault.sol";
 import "@aragon/apps-token-manager/contracts/TokenManager.sol";
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
+import "@aragon/os/contracts/common/EtherTokenConstant.sol";
 
 import "./TokenRequest.sol";
 
@@ -103,9 +104,9 @@ contract Template is TemplateBase {
         initApps(vault, tokenManager, tokenRequest, voting, token, testToken);
 
         acl.createPermission(tokenManager, voting, voting.CREATE_VOTES_ROLE(), this);
-        acl.createPermission(tokenManager, tokenRequest, tokenRequest.SET_TOKEN_MANAGER_ROLE(), msg.sender);
-        acl.createPermission(tokenManager, tokenRequest, tokenRequest.SET_VAULT_ROLE(), msg.sender);
-        acl.createPermission(voting, tokenRequest, tokenRequest.FINALISE_TOKEN_REQUEST_ROLE(), msg.sender);
+        acl.createPermission(tokenManager, tokenRequest, tokenRequest.SET_TOKEN_MANAGER_ROLE(), root);
+        acl.createPermission(tokenManager, tokenRequest, tokenRequest.SET_VAULT_ROLE(), root);
+        acl.createPermission(voting, tokenRequest, tokenRequest.FINALISE_TOKEN_REQUEST_ROLE(), root);
         acl.createPermission(this, tokenManager, tokenManager.MINT_ROLE(), this);
         acl.grantPermission(tokenRequest, tokenManager, tokenManager.MINT_ROLE());
         acl.createPermission(this, tokenRequest,tokenRequest.MODIFY_TOKENS_ROLE(), this);
@@ -113,22 +114,22 @@ contract Template is TemplateBase {
 
         //acl.createPermission(tokenRequest, tokenManager, tokenManager.MINT_ROLE(), root);
 
-        tokenManager.mint(msg.sender, 10e18); // Give ten tokens to root
-        createTokenForUser(msg.sender, tokenFactory, tokenRequest, testToken);
+        tokenManager.mint(root, 10e18); // Give ten tokens to root
+        createTokenForUser(root, tokenFactory, tokenRequest, testToken);
 
         // Clean up permissions
 
-        acl.grantPermission(msg.sender, dao, dao.APP_MANAGER_ROLE());
+        acl.grantPermission(root, dao, dao.APP_MANAGER_ROLE());
         acl.revokePermission(this, dao, dao.APP_MANAGER_ROLE());
-        acl.setPermissionManager(msg.sender, dao, dao.APP_MANAGER_ROLE());
+        acl.setPermissionManager(root, dao, dao.APP_MANAGER_ROLE());
 
-        acl.grantPermission(msg.sender, acl, acl.CREATE_PERMISSIONS_ROLE());
+        acl.grantPermission(root, acl, acl.CREATE_PERMISSIONS_ROLE());
         acl.revokePermission(this, acl, acl.CREATE_PERMISSIONS_ROLE());
-        acl.setPermissionManager(msg.sender, acl, acl.CREATE_PERMISSIONS_ROLE());
+        acl.setPermissionManager(root, acl, acl.CREATE_PERMISSIONS_ROLE());
 
         acl.grantPermission(voting, tokenManager, tokenManager.MINT_ROLE());
         acl.revokePermission(this, tokenManager, tokenManager.MINT_ROLE());
-        acl.setPermissionManager(msg.sender, tokenManager, tokenManager.MINT_ROLE());
+        acl.setPermissionManager(root, tokenManager, tokenManager.MINT_ROLE());
         
 
         emit DeployInstance(dao);
@@ -137,8 +138,9 @@ contract Template is TemplateBase {
     function initApps(Vault vault, TokenManager tokenManager, TokenRequest tokenRequest, Voting voting, MiniMeToken token, MiniMeToken testToken) internal { 
         vault.initialize();
         tokenManager.initialize(token, true, 0);
-        address[] memory tokenList = new address[](1);
+        address[] memory tokenList = new address[](2);
         tokenList[0] = address(testToken);
+        tokenList[1] = address(0);
         tokenRequest.initialize(tokenManager, vault, tokenList);
         voting.initialize(token, 50 * PCT, 20 * PCT, 1 days);
     }
