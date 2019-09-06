@@ -1,4 +1,4 @@
-const tokenRequestSettings = [['timeToExpiry', 'timeToExpiry']]
+const tokenRequestSettings = [['acceptedTokens', 'acceptedTokens']]
 
 export function hasLoadedtokenRequestSettings(state) {
   state = state || {}

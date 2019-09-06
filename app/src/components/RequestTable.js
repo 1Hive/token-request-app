@@ -1,14 +1,13 @@
 import React, { useCallback } from 'react'
 import styled from 'styled-components'
-import { DataView, Text, ContextMenu, ContextMenuItem, IconCoin, theme, IconVote, Timer } from '@aragon/ui'
+import { DataView, Text, ContextMenu, ContextMenuItem, IconCoin, theme, IconVote } from '@aragon/ui'
 import { formatTokenAmountSymbol } from '../lib/token-utils'
-import { toHours, hoursToMs } from '../lib/math-utils'
 import { format, compareDesc } from 'date-fns'
 import { requestStatus } from '../lib/constants'
 
 const PAGINATION = 10
 
-function RequestTable({ requests, token, timeToExpiry, onSubmit, onWithdraw }) {
+function RequestTable({ requests, token, onSubmit, onWithdraw }) {
   const handleSubmit = useCallback(
     requestId => {
       onSubmit(requestId)
@@ -23,21 +22,11 @@ function RequestTable({ requests, token, timeToExpiry, onSubmit, onWithdraw }) {
     [onWithdraw]
   )
 
-  const renderExpirationTime = (date, timeToExpiry, status, actionDate) => {
-    if (status === requestStatus.PENDING) {
-      const endDateMs = date + hoursToMs(timeToExpiry)
-      const end = new Date(endDateMs)
-
-      return <Timer end={end} />
-    } else {
-      return <time>{format(actionDate, 'dd/MM/yy')}</time>
-    }
-  }
   return (
     <>
       {requests && requests.length > 0 && (
         <DataView
-          fields={['Request Date', 'Deposited', 'Requested', 'Expiry by', 'Status', 'Actions']}
+          fields={['Request Date', 'Deposited', 'Requested', 'Status', 'Actions']}
           entries={requests
             .sort(({ date: dateLeft }, { date: dateRight }) =>
               // Sort by date descending
@@ -53,7 +42,6 @@ function RequestTable({ requests, token, timeToExpiry, onSubmit, onWithdraw }) {
               r.depositDecimals,
               r.requestAmount,
               r.status,
-              r.actionDate,
               token.symbol,
               token.decimals,
             ])}
@@ -67,16 +55,14 @@ function RequestTable({ requests, token, timeToExpiry, onSubmit, onWithdraw }) {
             depositDecimals,
             requestedAmount,
             status,
-            actionDate,
             requestedSymbol,
             requestedDecimals,
           ]) => [
             <time>{format(date, 'dd/MM/yy')}</time>,
             <Text>{`${formatTokenAmountSymbol(depositSymbol, depositAmount, false, depositDecimals)} `}</Text>,
             <Text>{`${formatTokenAmountSymbol(requestedSymbol, requestedAmount, false, requestedDecimals)} `}</Text>,
-            renderExpirationTime(date, timeToExpiry, status, actionDate),
             <Status status={status}>{`${status}`}</Status>,
-            <ContextMenu>
+            <ContextMenu disabled={status != requestStatus.PENDING}>
               {status === requestStatus.PENDING && (
                 <ContextMenuItem onClick={() => handleSubmit(requestId)}>
                   <IconWrapper>
@@ -85,7 +71,7 @@ function RequestTable({ requests, token, timeToExpiry, onSubmit, onWithdraw }) {
                   <div css="margin-left: 15px">Submit</div>
                 </ContextMenuItem>
               )}
-              {(status === requestStatus.PENDING || status === requestStatus.EXPIRED) && (
+              {status === requestStatus.PENDING && (
                 <ContextMenuItem onClick={() => handleWithdraw(requestId)}>
                   <IconWrapper>
                     <IconCoin />

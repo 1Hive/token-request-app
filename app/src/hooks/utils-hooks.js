@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 
 export function useSidePanel() {
   const [visible, setVisible] = useState(false)
@@ -26,17 +26,4 @@ export function useSidePanel() {
   }, [setVisible, setOpened])
 
   return { opened, visible, requestOpen, endTransition, requestClose }
-}
-
-export function useNow(updateEvery = 1000) {
-  const [now, setNow] = useState(new Date())
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(new Date())
-    }, updateEvery)
-    return () => {
-      clearInterval(timer)
-    }
-  }, [updateEvery])
-  return now
 }

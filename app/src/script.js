@@ -2,20 +2,9 @@ import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 import Aragon, { events } from '@aragon/api'
 import { first } from 'rxjs/operators'
-import tokenDecimalsAbi from './abi/token-decimals.json'
-import tokenNameAbi from './abi/token-name.json'
-import tokenSymbolAbi from './abi/token-symbol.json'
 import tmAbi from './abi/tokenManager.json'
 import { requestStatus } from './lib/constants'
-import {
-  ETHER_TOKEN_FAKE_ADDRESS,
-  tokenDataFallback,
-  getTokenSymbol,
-  getTokenName,
-  getTokenDecimals,
-} from './lib/token-utils'
-
-const tokenAbi = [].concat(tokenDecimalsAbi, tokenNameAbi, tokenSymbolAbi)
+import { tokenDataFallback, getTokenSymbol, getTokenName, getTokenDecimals } from './lib/token-utils'
 
 const app = new Aragon()
 
@@ -34,8 +23,7 @@ async function initialize(tokenManagerAddress) {
     .pipe(first())
     .toPromise()
   const tmContract = app.external(tokenManagerAddress, tmAbi)
-  tokens = await app.call('getAcceptedTokenList').toPromise()
-  tokens.unshift(ETHER_TOKEN_FAKE_ADDRESS)
+  tokens = await app.call('getAcceptedDepositTokens').toPromise()
 
   const settings = {
     network,
@@ -45,7 +33,7 @@ async function initialize(tokenManagerAddress) {
 
 async function createStore(tokenManagerContract, tokens, settings) {
   return app.store(
-    (state, { event, returnValues }) => {
+    (state, { event, returnValues, blockNumber }) => {
       let nextState = {
         ...state,
       }
@@ -58,7 +46,7 @@ async function createStore(tokenManagerContract, tokens, settings) {
         case events.SYNC_STATUS_SYNCED:
           return { ...nextState, isSyncing: false }
         case 'TokenRequestCreated':
-          return newTokenRequest(nextState, returnValues, settings)
+          return newTokenRequest(nextState, returnValues, settings, blockNumber)
         case 'TokenRequestRefunded':
           return requestRefunded(nextState, returnValues)
         case 'TokenRequestFinalised':
@@ -85,7 +73,6 @@ function initializeState(state, tokenManagerContract, tokens, settings) {
       const minimeAddress = await tokenManagerContract.token().toPromise()
       const token = await getTokenData(minimeAddress, settings)
       const acceptedTokens = await getAcceptedTokens(tokens, settings)
-      const timeToExpiry = await app.call('timeToExpiry').toPromise()
 
       token && app.indentify(`token-request ${token.symbol}`)
 
@@ -95,7 +82,6 @@ function initializeState(state, tokenManagerContract, tokens, settings) {
         token,
         acceptedTokens: acceptedTokens,
         requests: [],
-        timeToExpiry,
       }
     } catch (error) {
       console.error('Error initializing state: ', error)
@@ -121,13 +107,15 @@ async function updateConnectedAccount(state, { account }) {
 async function newTokenRequest(
   state,
   { requestId, requesterAddress, depositToken, depositAmount, requestAmount, date },
-  settings
+  settings,
+  blockNumber
 ) {
   const { account, requests } = state
   let status
   if (!account) return state
 
   const { decimals, name, symbol } = await getTokenData(depositToken, settings)
+  const { timestamp } = await app.web3Eth('getBlock', blockNumber).toPromise()
 
   const tokenRequestList = await app.call('getTokenRequest', requestId).toPromise()
   if (tokenRequestList.requesterAddress != ZERO_ADDRESS) {
@@ -148,28 +136,27 @@ async function newTokenRequest(
         depositAmount,
         requestAmount,
         status,
-        date: marshallDate(date),
-        actionDate: null,
+        date: marshallDate(timestamp),
       },
     ],
   }
 }
 
-async function requestRefunded(state, { requestId, refundedDate }) {
+async function requestRefunded(state, { requestId }) {
   const { requests } = state
   const nextStatus = requestStatus.WITHDRAWED
   return {
     ...state,
-    requests: await updateRequestStatus(requests, requestId, nextStatus, refundedDate),
+    requests: await updateRequestStatus(requests, requestId, nextStatus),
   }
 }
-async function requestFinalised(state, { requestId, finalizedDate }) {
+async function requestFinalised(state, { requestId }) {
   const { requests } = state
   const nextStatus = requestStatus.APPROVED
 
   return {
     ...state,
-    requests: await updateRequestStatus(requests, requestId, nextStatus, finalizedDate),
+    requests: await updateRequestStatus(requests, requestId, nextStatus),
   }
 }
 
@@ -193,7 +180,7 @@ async function getTokenData(tokenAddress, settings) {
   }
 }
 
-async function updateRequestStatus(requests, requestId, nextStatus, actionDate) {
+async function updateRequestStatus(requests, requestId, nextStatus) {
   const requestIndex = requests.findIndex(request => request.requestId === requestId)
 
   if (requestIndex !== -1) {
@@ -201,7 +188,6 @@ async function updateRequestStatus(requests, requestId, nextStatus, actionDate) 
     nextRequests[requestIndex] = {
       ...nextRequests[requestIndex],
       status: nextStatus,
-      actionDate: marshallDate(actionDate),
     }
     return nextRequests
   } else {

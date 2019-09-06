@@ -48,14 +48,31 @@ contract TemplateBase is APMNamehash {
 
         return base;
     }
+
+    function installApp(Kernel dao, bytes32 appId) internal returns (address) {
+        address instance = address(dao.newAppInstance(appId, latestVersionAppBase(appId)));
+        emit InstalledApp(instance, appId);
+        return instance;
+    }
+
+    function installDefaultApp(Kernel dao, bytes32 appId) internal returns (address) {
+        address instance = address(dao.newAppInstance(appId, latestVersionAppBase(appId), new bytes(0), true));
+        emit InstalledApp(instance, appId);
+        return instance;
+    }
 }
 
 
 contract Template is TemplateBase {
-    MiniMeTokenFactory tokenFactory;
-
     uint64 constant PCT = 10 ** 16;
-    address constant ANY_ENTITY = address(-1);
+
+    bytes32 internal VAULT_APP_ID = apmNamehash("vault");
+    bytes32 internal VOTING_APP_ID = apmNamehash("voting");
+    bytes32 internal FINANCE_APP_ID = apmNamehash("finance");
+    bytes32 internal TOKEN_MANAGER_APP_ID = apmNamehash("token-manager");
+
+    MiniMeTokenFactory tokenFactory;
+    address root = msg.sender;
 
     constructor(ENS ens) TemplateBase(DAOFactory(0), ens) public {
         tokenFactory = new MiniMeTokenFactory();
@@ -66,7 +83,6 @@ contract Template is TemplateBase {
         ACL acl = ACL(dao.acl());
         acl.createPermission(this, dao, dao.APP_MANAGER_ROLE(), this);
 
-        address root = msg.sender;
         bytes32 tokenRequestAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("token-request")));
         bytes32 votingAppId = apmNamehash("voting");
         bytes32 tokenManagerAppId = apmNamehash("token-manager");
@@ -78,40 +94,57 @@ contract Template is TemplateBase {
         Voting voting = Voting(dao.newAppInstance(votingAppId, latestVersionAppBase(votingAppId)));
         TokenManager tokenManager = TokenManager(dao.newAppInstance(tokenManagerAppId, latestVersionAppBase(tokenManagerAppId)));
 
+
         MiniMeToken token = tokenFactory.createCloneToken(MiniMeToken(0), 0, "Requestable token", 18, "RQT", true);
         token.changeController(tokenManager);
+        MiniMeToken testToken = tokenFactory.createCloneToken(MiniMeToken(0), 0, "TestToken", 18, "TST", true);
 
         // Initialize apps
-        vault.initialize();
-        tokenManager.initialize(token, true, 0);
-        tokenRequest.initialize(tokenManager, vault, new address[](0));
-        voting.initialize(token, 50 * PCT, 20 * PCT, 1 days);
+        initApps(vault, tokenManager, tokenRequest, voting, token, testToken);
 
+        acl.createPermission(tokenManager, voting, voting.CREATE_VOTES_ROLE(), this);
+        acl.createPermission(tokenManager, tokenRequest, tokenRequest.SET_TOKEN_MANAGER_ROLE(), msg.sender);
+        acl.createPermission(tokenManager, tokenRequest, tokenRequest.SET_VAULT_ROLE(), msg.sender);
+        acl.createPermission(voting, tokenRequest, tokenRequest.FINALISE_TOKEN_REQUEST_ROLE(), msg.sender);
         acl.createPermission(this, tokenManager, tokenManager.MINT_ROLE(), this);
-        acl.createPermission(tokenRequest, tokenManager, tokenManager.MINT_ROLE(), root);
-        tokenManager.mint(root, 10e18); // Give ten tokens to root
+        acl.grantPermission(tokenRequest, tokenManager, tokenManager.MINT_ROLE());
+        acl.createPermission(this, tokenRequest,tokenRequest.MODIFY_TOKENS_ROLE(), this);
+        acl.grantPermission(tokenRequest, voting, voting.CREATE_VOTES_ROLE());
 
+        //acl.createPermission(tokenRequest, tokenManager, tokenManager.MINT_ROLE(), root);
 
-        acl.createPermission(tokenManager, voting, voting.CREATE_VOTES_ROLE(), root);
-        acl.createPermission(tokenManager, tokenRequest, tokenRequest.SET_TOKEN_MANAGER_ROLE(), root);
-        acl.createPermission(tokenManager, tokenRequest, tokenRequest.SET_VAULT_ROLE(), root);
-        acl.createPermission(voting, tokenRequest, tokenRequest.FINALISE_TOKEN_REQUEST_ROLE(), root);
+        tokenManager.mint(msg.sender, 10e18); // Give ten tokens to root
+        createTokenForUser(msg.sender, tokenFactory, tokenRequest, testToken);
 
         // Clean up permissions
 
-        acl.grantPermission(root, dao, dao.APP_MANAGER_ROLE());
+        acl.grantPermission(msg.sender, dao, dao.APP_MANAGER_ROLE());
         acl.revokePermission(this, dao, dao.APP_MANAGER_ROLE());
-        acl.setPermissionManager(root, dao, dao.APP_MANAGER_ROLE());
+        acl.setPermissionManager(msg.sender, dao, dao.APP_MANAGER_ROLE());
 
-        acl.grantPermission(root, acl, acl.CREATE_PERMISSIONS_ROLE());
+        acl.grantPermission(msg.sender, acl, acl.CREATE_PERMISSIONS_ROLE());
         acl.revokePermission(this, acl, acl.CREATE_PERMISSIONS_ROLE());
-        acl.setPermissionManager(root, acl, acl.CREATE_PERMISSIONS_ROLE());
+        acl.setPermissionManager(msg.sender, acl, acl.CREATE_PERMISSIONS_ROLE());
 
         acl.grantPermission(voting, tokenManager, tokenManager.MINT_ROLE());
         acl.revokePermission(this, tokenManager, tokenManager.MINT_ROLE());
-        acl.setPermissionManager(root, tokenManager, tokenManager.MINT_ROLE());
+        acl.setPermissionManager(msg.sender, tokenManager, tokenManager.MINT_ROLE());
+        
 
         emit DeployInstance(dao);
     }
 
+    function initApps(Vault vault, TokenManager tokenManager, TokenRequest tokenRequest, Voting voting, MiniMeToken token, MiniMeToken testToken) internal { 
+        vault.initialize();
+        tokenManager.initialize(token, true, 0);
+        address[] memory tokenList = new address[](1);
+        tokenList[0] = address(testToken);
+        tokenRequest.initialize(tokenManager, vault, tokenList);
+        voting.initialize(token, 50 * PCT, 20 * PCT, 1 days);
+    }
+
+    function createTokenForUser(address root, MiniMeTokenFactory tokenFactory, TokenRequest tokenRequest, MiniMeToken testToken) internal {       
+        testToken.generateTokens(root, 300e18);
+        testToken.changeController(root);
+    }
 }
