@@ -84,6 +84,7 @@ class TokenSelector extends React.Component {
             items={items}
             selected={activeIndex}
             onChange={this.handleChange}
+            header={label}
             required
             wide
             width="390px"

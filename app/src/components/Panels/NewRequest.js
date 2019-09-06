@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
-import { Button, Field, Text, TextInput, theme } from '@aragon/ui'
+import { Button, Field, Text, TextInput, theme, GU } from '@aragon/ui'
 import { useAppState } from '@aragon/api-react'
 import { useAragonApi, useApi } from '@aragon/api-react'
 import TokenSelector from '../TokenSelector'
@@ -18,7 +18,7 @@ function NewRequest({ network, panelOpened, onRequest }) {
   const { acceptedTokens, account, token } = useAppState()
   const api = useApi()
 
-  const [amount, setAmount] = useState(0)
+  const [amount, setAmount] = useState('')
   const [selectedToken, setSelectedToken] = useState({
     coerced: false, // whether the token was coerced from a symbol to an address
     error: NO_ERROR,
@@ -27,7 +27,7 @@ function NewRequest({ network, panelOpened, onRequest }) {
   })
 
   const [selectedTokenData, setSelectedTokenData] = useState()
-  const [requestedAmount, setRequestedAmount] = useState(0)
+  const [requestedAmount, setRequestedAmount] = useState('')
   const [tokenBalanceMessage, setTokenBalanceMessage] = useState('')
 
   useEffect(() => {
@@ -42,8 +42,18 @@ function NewRequest({ network, panelOpened, onRequest }) {
   }, [selectedToken.index])
 
   useEffect(() => {
-    // const tokenBalanceMessage = renderBalanceForSelectedToken(selectedToken)
-  }, [selectedTokenData])
+    if (!panelOpened) {
+      setSelectedToken({
+        coerced: false,
+        error: NO_ERROR,
+        index: -1,
+        value: '',
+      })
+      setAmount('')
+      setRequestedAmount('')
+      setTokenBalanceMessage('')
+    }
+  }, [panelOpened])
 
   const renderBalanceForSelectedToken = selectedToken => {
     const { decimals, loading, symbol, userBalance } = selectedToken
@@ -143,7 +153,12 @@ function NewRequest({ network, panelOpened, onRequest }) {
   }
 
   return (
-    <form onSubmit={handleFormSubmit}>
+    <form
+      onSubmit={handleFormSubmit}
+      css={`
+        margin-top: ${3 * GU}px;
+      `}
+    >
       <TokenSelector activeIndex={selectedToken.index} onChange={handleSelectedToken} tokens={acceptedTokens} wide />
       <TokenBalance>
         <Text size="small" color={theme.textSecondary}>

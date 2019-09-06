@@ -1,9 +1,6 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useMemo, useCallback } from 'react'
 import { useAppState, useAragonApi } from '@aragon/api-react'
-import { useSidePanel, useNow } from './utils-hooks'
-import { hasExpired } from '../lib/token-request-utils'
-import { requestStatus } from '../lib/constants'
-import { hoursToMs } from '../lib/math-utils'
+import { useSidePanel } from './utils-hooks'
 
 export function useRequestAction(onDone) {
   const { api } = useAragonApi()
