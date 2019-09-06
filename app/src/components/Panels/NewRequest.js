@@ -137,6 +137,7 @@ function NewRequest({ network, panelOpened, onRequest }) {
       return
     }
     setSelectedToken(token)
+    setSelectedTokenData({ ...selectedToken, loading: true })
   })
 
   const loadTokenData = async address => {
@@ -220,7 +221,6 @@ function NewRequest({ network, panelOpened, onRequest }) {
     return true
   }
 
-  console.log('AMOUNTTTTT ', depositedAmount)
   return (
     <form
       onSubmit={handleFormSubmit}
