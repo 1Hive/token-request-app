@@ -39,9 +39,33 @@ We do need to provide an interface for requesting tokens, which would allow user
 
 We do need to provide an interface for claiming payments when the request is rejected.
 
-## How to run
+## How to run Token request app locally
 
-TODO:
+First make sure that you have node, npm, and the Aragon CLI installed and working. Instructions on how to set that up can be found [here](https://hack.aragon.org/docs/cli-intro.html). You'll also need to have [Metamask](https://metamask.io) or some kind of web wallet enabled to sign transactions in the browser.
+
+Git clone this repo.
+
+```sh
+git clone https://github.com/1Hive/token-request-app.git
+```
+
+Navigate into the `token-request-app` directory.
+
+```sh
+cd token-request-app
+```
+
+Install npm dependencies.
+
+```sh
+npm i
+```
+
+Deploy a dao with Lock app installed on your local environment.
+
+```sh
+npm run start:template
+```
 
 ## How to deploy to an organization
 
