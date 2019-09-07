@@ -73,7 +73,6 @@ function initializeState(state, tokenManagerContract, tokens, settings) {
       const minimeAddress = await tokenManagerContract.token().toPromise()
       const token = await getTokenData(minimeAddress, settings)
       const acceptedTokens = await getAcceptedTokens(tokens, settings)
-
       token && app.indentify(`token-request ${token.symbol}`)
 
       return {

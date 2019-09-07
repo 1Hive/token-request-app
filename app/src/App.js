@@ -12,11 +12,8 @@ import MainButton from './components/MainButton'
 import { requestStatus } from './lib/constants'
 
 const useRequests = (req, connectedAccount) => {
-  const pendingRequests = req.filter(request => request.status === requestStatus.PENDING)
-  const rejectedRequests = req.filter(request => request.status === requestStatus.EXPIRED)
-  const approvedRequests = req.filter(request => request.status === requestStatus.APPROVED)
   const userRequests = req.filter(request => request.requesterAddress === connectedAccount)
-  return { pendingRequests, rejectedRequests, approvedRequests, userRequests }
+  return { userRequests }
 }
 
 const App = () => {
