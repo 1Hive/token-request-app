@@ -1,9 +1,6 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useMemo, useCallback } from 'react'
 import { useAppState, useAragonApi } from '@aragon/api-react'
-import { useSidePanel, useNow } from './utils-hooks'
-import { hasExpired } from '../lib/token-request-utils'
-import { requestStatus } from '../lib/constants'
-import { hoursToMs } from '../lib/math-utils'
+import { useSidePanel } from './utils-hooks'
 
 export function useRequestAction(onDone) {
   const { api } = useAragonApi()
@@ -57,32 +54,19 @@ export function useWithdrawAction(onDone) {
 }
 
 const useRequests = () => {
-  const { requests, timeToExpiry } = useAppState()
-  const now = useNow()
-  const requestsExpired = (requests || []).map(request => {
-    return hasExpired(request.date, now, timeToExpiry)
-  })
+  const { requests } = useAppState()
 
-  const requestStatusKey = requestsExpired.join('')
   return useMemo(
     () =>
       (requests || []).map((request, index) => ({
         ...request,
-        status:
-          requests[index].status === requestStatus.PENDING && requestsExpired[index]
-            ? requestStatus.EXPIRED
-            : requests[index].status,
-        actionDate:
-          requests[index].status === requestStatus.PENDING && requestsExpired[index]
-            ? requests[index].date + hoursToMs(timeToExpiry)
-            : requests[index].actionDate,
       })),
-    [requests, requestStatusKey]
+    [requests]
   )
 }
 
 export function useAppLogic() {
-  const { acceptedTokens, account, token, isSyncing, ready, timeToExpiry } = useAppState()
+  const { acceptedTokens, account, token, isSyncing, ready } = useAppState()
   const requests = useRequests()
   const panelState = useSidePanel()
 
@@ -98,7 +82,6 @@ export function useAppLogic() {
     acceptedTokens,
     account,
     token,
-    timeToExpiry,
     actions,
     requests,
   }

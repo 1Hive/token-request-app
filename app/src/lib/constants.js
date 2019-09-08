@@ -1,7 +1,5 @@
 export const requestStatus = {
   PENDING: 'PENDING',
-  SUBMITTED: 'SUBMITTED',
-  EXPIRED: 'EXPIRED',
   APPROVED: 'APPROVED',
   WITHDRAWED: 'WITHDRAWED',
 }

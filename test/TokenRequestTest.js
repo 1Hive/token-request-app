@@ -87,7 +87,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
   describe('initialize(address _tokenManager, address _vault)', () => {
     beforeEach(async () => {
       let acceptedDepositTokens = new Array(2)
-      acceptedDepositTokens[0] = requestableToken.address
+      acceptedDepositTokens[0] = mockErc20.address
       acceptedDepositTokens[1] = ETH_ADDRESS
       await tokenRequest.initialize(tokenManager.address, vault.address, acceptedDepositTokens)
     })
@@ -166,11 +166,11 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         await tokenRequest.createTokenRequest(mockErc20.address, ROOT_TOKEN_AMOUNT, 300)
 
-        const actualTRBalance = await mockErc20.balanceOf(tokenRequest.address)
+        const actualTokenRequestBalance = await mockErc20.balanceOf(tokenRequest.address)
 
         const actualNextTokenRequestId = await tokenRequest.nextTokenRequestId()
 
-        assert.equal(actualTRBalance, expectedTokenRequestBalance)
+        assert.equal(actualTokenRequestBalance, expectedTokenRequestBalance)
         assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId)
       })
 
@@ -298,17 +298,16 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         })
 
         const requestTransaction = await web3.eth.getTransaction(request.tx)
-        let requestPrice = new BN()
         const requestGasUsed = new BN(request.receipt.gasUsed)
         const requestTransactionGasPrice = new BN(requestTransaction.gasPrice)
-        requestPrice = requestGasUsed.mul(requestTransactionGasPrice)
+        const requestPrice = new BN(requestGasUsed.mul(requestTransactionGasPrice))
 
         const refund = await tokenRequest.refundTokenRequest(0, { from: refundEthAccount })
         const refundTransaction = await web3.eth.getTransaction(refund.tx)
-        let refundPrice = new BN()
+
         const refundGasUsed = new BN(refund.receipt.gasUsed)
         const refundGasPrice = new BN(refundTransaction.gasPrice)
-        refundPrice = refundGasUsed.mul(refundGasPrice)
+        const refundPrice = new BN(refundGasUsed.mul(refundGasPrice))
 
         let actualBalance = new BN(await web3.eth.getBalance(refundEthAccount))
         const actualETHBalance = actualBalance.add(refundPrice).add(requestPrice)

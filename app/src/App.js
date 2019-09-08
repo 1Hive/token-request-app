@@ -12,15 +12,12 @@ import MainButton from './components/MainButton'
 import { requestStatus } from './lib/constants'
 
 const useRequests = (req, connectedAccount) => {
-  const pendingRequests = req.filter(request => request.status === requestStatus.PENDING)
-  const rejectedRequests = req.filter(request => request.status === requestStatus.EXPIRED)
-  const approvedRequests = req.filter(request => request.status === requestStatus.APPROVED)
   const userRequests = req.filter(request => request.requesterAddress === connectedAccount)
-  return { pendingRequests, rejectedRequests, approvedRequests, userRequests }
+  return { userRequests }
 }
 
 const App = () => {
-  const { panelState, isSyncing, acceptedTokens, account, token, timeToExpiry, actions, requests } = useAppLogic()
+  const { panelState, isSyncing, acceptedTokens, account, token, actions, requests } = useAppLogic()
   const [screenIndex, setScreenIndex] = useState(0)
   const [userRequests, setUserRequests] = useState()
 
@@ -84,19 +81,12 @@ const App = () => {
           <Tabs items={['Requests', 'My Requests']} selected={screenIndex} onChange={handleTabChange} />
         </TabsWrapper>
         {screenIndex === 0 && (
-          <Requests
-            requests={requests}
-            token={token}
-            timeToExpiry={timeToExpiry}
-            onSubmit={handleSubmit}
-            onWithdraw={handleWithdraw}
-          ></Requests>
+          <Requests requests={requests} token={token} onSubmit={handleSubmit} onWithdraw={handleWithdraw}></Requests>
         )}
         {screenIndex === 1 && (
           <Requests
             requests={userRequests}
             token={token}
-            timeToExpiry={timeToExpiry}
             onSubmit={handleSubmit}
             onWithdraw={handleWithdraw}
           ></Requests>
