@@ -225,7 +225,10 @@ contract TokenRequest is AragonApp {
         depositAmount = tokenRequest.depositAmount;
         requestAmount = tokenRequest.requestAmount;
     }
-
+    
+    /**
+    * @dev convenience function for getting the token request token in a radspec string
+    */
     function getToken() internal returns (address) {
         return tokenManager.token();
     }
