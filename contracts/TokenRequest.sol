@@ -30,7 +30,7 @@ contract TokenRequest is AragonApp {
     string private constant ERROR_TOKEN_NOT_ACCEPTED = "TOKEN_REQUEST_TOKEN_NOT_ACCEPTED";
     string private constant ERROR_ADDRESS_NOT_CONTRACT = "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT";
     string private constant ERROR_NO_AMOUNT = "TOKEN_REQUEST_NO_AMOUNT";
-    string private constant ERROR_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
+    string private constant ERROR_TOKEN_REQUEST_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
     string private constant ERROR_NO_DEPOSIT = "TOKEN_REQUEST_NO_DEPOSIT";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
@@ -155,8 +155,7 @@ contract TokenRequest is AragonApp {
         TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
         delete tokenRequests[_tokenRequestId];
 
-        require(tokenRequestCopy.requesterAddress == msg.sender, ERROR_NOT_OWNER);
-        require(tokenRequestCopy.depositAmount > 0, ERROR_NO_DEPOSIT);
+        require(tokenRequestCopy.requesterAddress == msg.sender, ERROR_TOKEN_REQUEST_NOT_OWNER);
 
         address refundToAddress = tokenRequestCopy.requesterAddress;
         address refundToken = tokenRequestCopy.depositToken;
@@ -202,7 +201,7 @@ contract TokenRequest is AragonApp {
 
         tokenManager.mint(requesterAddress, requestAmount);
 
-        addressesTokenRequestIds[msg.sender].deleteItem(_tokenRequestId);
+        addressesTokenRequestIds[requesterAddress].deleteItem(_tokenRequestId);
 
         emit TokenRequestFinalised(_tokenRequestId, requesterAddress, depositToken, depositAmount, requestAmount);
     }
@@ -226,7 +225,10 @@ contract TokenRequest is AragonApp {
         depositAmount = tokenRequest.depositAmount;
         requestAmount = tokenRequest.requestAmount;
     }
-
+    
+    /**
+    * @dev convenience function for getting the token request token in a radspec string
+    */
     function getToken() internal returns (address) {
         return tokenManager.token();
     }

@@ -15,8 +15,7 @@ contract ForwarderMock is IForwarder, AragonApp {
     }
 
      function canForward(address _sender, bytes) public view returns (bool) {
-        // Note that `canPerform()` implicitly does an initialization check itself
-        return hasInitialized();
+        return true;
     }
 
      function isForwarder() external pure returns (bool) {
