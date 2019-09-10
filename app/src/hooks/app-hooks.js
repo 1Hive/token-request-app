@@ -53,21 +53,21 @@ export function useWithdrawAction(onDone) {
   )
 }
 
-const useRequests = () => {
-  const { requests } = useAppState()
+// const useRequests = () => {
+//   const { requests } = useAppState()
 
-  return useMemo(
-    () =>
-      (requests || []).map((request, index) => ({
-        ...request,
-      })),
-    [requests]
-  )
-}
+//   return useMemo(
+//     () =>
+//       (requests || []).map((request, index) => ({
+//         ...request,
+//       })),
+//     [requests]
+//   )
+// }
 
 export function useAppLogic() {
-  const { acceptedTokens, account, token, isSyncing, ready } = useAppState()
-  const requests = useRequests()
+  const { acceptedTokens, account, token, isSyncing, ready, requests } = useAppState()
+  // const requests = useRequests()
   const panelState = useSidePanel()
 
   const actions = {

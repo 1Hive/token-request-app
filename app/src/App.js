@@ -18,6 +18,7 @@ const useRequests = (req, connectedAccount) => {
 
 const App = () => {
   const { panelState, isSyncing, acceptedTokens, account, token, actions, requests } = useAppLogic()
+  console.log('APP REQUESTS ', requests)
   const [screenIndex, setScreenIndex] = useState(0)
   const [userRequests, setUserRequests] = useState()
 
