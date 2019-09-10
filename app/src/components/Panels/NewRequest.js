@@ -228,9 +228,8 @@ function NewRequest({ network, panelOpened, onRequest }) {
         margin-top: ${3 * GU}px;
       `}
     >
-      {acceptedTokens && (
-        <TokenSelector activeIndex={selectedToken.index} onChange={handleSelectedToken} tokens={acceptedTokens} wide />
-      )}
+      <TokenSelector activeIndex={selectedToken.index} onChange={handleSelectedToken} tokens={acceptedTokens} wide />
+
       <TokenBalance>
         <Text size="small" color={theme.textSecondary}>
           {tokenBalanceMessage}

@@ -86,7 +86,6 @@ function initializeState(state, tokenManagerContract, tokens, settings) {
         address: ETHER_TOKEN_FAKE_ADDRESS,
       })
       token && app.indentify(`token-request ${token.symbol}`)
-      console.log('ACCEPTED SCRIPT ', acceptedTokens)
       return {
         ...state,
         isSyncing: true,
@@ -124,7 +123,6 @@ async function newTokenRequest(
   blockNumber
 ) {
   try {
-    console.log('NEW REQUEST!!!!!!!!! ', requestAmount)
     const { account, requests } = state
     let status
     if (!account) return state

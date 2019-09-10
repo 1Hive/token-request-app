@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react'
+import { useCallback } from 'react'
 import { useAppState, useAragonApi } from '@aragon/api-react'
 import { useSidePanel } from './utils-hooks'
 
@@ -53,21 +53,8 @@ export function useWithdrawAction(onDone) {
   )
 }
 
-// const useRequests = () => {
-//   const { requests } = useAppState()
-
-//   return useMemo(
-//     () =>
-//       (requests || []).map((request, index) => ({
-//         ...request,
-//       })),
-//     [requests]
-//   )
-// }
-
 export function useAppLogic() {
   const { acceptedTokens, account, token, isSyncing, ready, requests } = useAppState()
-  // const requests = useRequests()
   const panelState = useSidePanel()
 
   const actions = {

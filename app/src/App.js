@@ -9,7 +9,6 @@ import requestIcon from './assets/icono.svg'
 import { ETHER_TOKEN_FAKE_ADDRESS } from './lib/token-utils'
 import Requests from './screens/Requests'
 import MainButton from './components/MainButton'
-import { requestStatus } from './lib/constants'
 
 const useRequests = (req, connectedAccount) => {
   const userRequests = req.filter(request => request.requesterAddress === connectedAccount)
@@ -18,7 +17,6 @@ const useRequests = (req, connectedAccount) => {
 
 const App = () => {
   const { panelState, isSyncing, acceptedTokens, account, token, actions, requests } = useAppLogic()
-  console.log('APP REQUESTS ', requests)
   const [screenIndex, setScreenIndex] = useState(0)
   const [userRequests, setUserRequests] = useState()
 
