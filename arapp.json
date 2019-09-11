@@ -11,8 +11,13 @@
       "params": []
     },
     {
-      "name": "Finalise token request role",
+      "name": "Finalise token request",
       "id": "FINALISE_TOKEN_REQUEST_ROLE",
+      "params": []
+    },
+    {
+      "name": "Add/Remove a token from the accepted tokens",
+      "id": "MODIFY_TOKENS_ROLE",
       "params": []
     }
   ],
