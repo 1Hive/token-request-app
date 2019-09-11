@@ -229,6 +229,7 @@ function NewRequest({ network, panelOpened, onRequest }) {
       `}
     >
       <TokenSelector activeIndex={selectedToken.index} onChange={handleSelectedToken} tokens={acceptedTokens} wide />
+
       <TokenBalance>
         <Text size="small" color={theme.textSecondary}>
           {tokenBalanceMessage}

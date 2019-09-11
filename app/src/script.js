@@ -4,11 +4,21 @@ import Aragon, { events } from '@aragon/api'
 import { first } from 'rxjs/operators'
 import tmAbi from './abi/tokenManager.json'
 import { requestStatus } from './lib/constants'
-import { tokenDataFallback, getTokenSymbol, getTokenName, getTokenDecimals } from './lib/token-utils'
+import {
+  tokenDataFallback,
+  getTokenSymbol,
+  getTokenName,
+  getTokenDecimals,
+  ETHER_TOKEN_FAKE_ADDRESS,
+} from './lib/token-utils'
 
 const app = new Aragon()
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+const ETHER_DATA = {
+  decimals: 18,
+  name: 'Ether',
+  symbol: 'ETH',
+}
 
 app
   .call('tokenManager')
@@ -73,8 +83,13 @@ function initializeState(state, tokenManagerContract, tokens, settings) {
       const minimeAddress = await tokenManagerContract.token().toPromise()
       const token = await getTokenData(minimeAddress, settings)
       const acceptedTokens = await getAcceptedTokens(tokens, settings)
+      acceptedTokens.unshift({
+        decimals: '18',
+        name: 'Ether',
+        symbol: 'ETH',
+        address: ETHER_TOKEN_FAKE_ADDRESS,
+      })
       token && app.indentify(`token-request ${token.symbol}`)
-
       return {
         ...state,
         isSyncing: true,
@@ -89,10 +104,9 @@ function initializeState(state, tokenManagerContract, tokens, settings) {
 }
 
 const getAcceptedTokens = async (tokens, settings) => {
-  const promises = tokens.map(async tokenAddress => {
-    const token = await getTokenData(tokenAddress, settings)
-    return token
-  })
+  const promises = tokens
+    .filter(token => token != ETHER_TOKEN_FAKE_ADDRESS)
+    .map(tokenAddress => getTokenData(tokenAddress, settings))
   return Promise.all(promises)
 }
 
@@ -105,39 +119,37 @@ async function updateConnectedAccount(state, { account }) {
 
 async function newTokenRequest(
   state,
-  { requestId, requesterAddress, depositToken, depositAmount, requestAmount, date },
+  { requestId, requesterAddress, depositToken, depositAmount, requestAmount },
   settings,
   blockNumber
 ) {
-  const { account, requests } = state
-  let status
-  if (!account) return state
+  try {
+    const { requests } = state
+    const { decimals, name, symbol } =
+      depositToken === ETHER_TOKEN_FAKE_ADDRESS ? ETHER_DATA : await getTokenData(depositToken, settings)
 
-  const { decimals, name, symbol } = await getTokenData(depositToken, settings)
-  const { timestamp } = await app.web3Eth('getBlock', blockNumber).toPromise()
+    const { timestamp } = await app.web3Eth('getBlock', blockNumber).toPromise()
 
-  const tokenRequestList = await app.call('getTokenRequest', requestId).toPromise()
-  if (tokenRequestList.requesterAddress != ZERO_ADDRESS) {
-    status = requestStatus.PENDING
-  }
-
-  return {
-    ...state,
-    requests: [
-      ...requests,
-      {
-        requestId,
-        requesterAddress,
-        depositToken,
-        depositDecimals: decimals,
-        depositName: name,
-        depositSymbol: symbol,
-        depositAmount,
-        requestAmount,
-        status,
-        date: marshallDate(timestamp),
-      },
-    ],
+    return {
+      ...state,
+      requests: [
+        ...requests,
+        {
+          requestId,
+          requesterAddress,
+          depositToken,
+          depositDecimals: decimals,
+          depositName: name,
+          depositSymbol: symbol,
+          depositAmount,
+          requestAmount,
+          status: requestStatus.PENDING,
+          date: marshallDate(timestamp),
+        },
+      ],
+    }
+  } catch (err) {
+    console.log(err)
   }
 }
 
