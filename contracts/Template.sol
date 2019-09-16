@@ -28,7 +28,7 @@ contract TemplateBase is APMNamehash {
     ENS public ens;
     DAOFactory public fac;
 
-    event DeployInstance(address dao);
+    event DeployDao(address dao);
     event InstalledApp(address appProxy, bytes32 appId);
 
     constructor(DAOFactory _fac, ENS _ens) public {
@@ -132,7 +132,7 @@ contract Template is TemplateBase {
         acl.setPermissionManager(root, tokenManager, tokenManager.MINT_ROLE());
         
 
-        emit DeployInstance(dao);
+        emit DeployDao(dao);
     }
 
     function initApps(Vault vault, TokenManager tokenManager, TokenRequest tokenRequest, Voting voting, MiniMeToken token, MiniMeToken testToken) internal { 

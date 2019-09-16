@@ -13,7 +13,7 @@
     "@aragon/apps-token-manager": "^2.1.0",
     "@aragon/apps-vault": "^4.1.0",
     "@aragon/apps-voting": "^2.1.0",
-    "@aragon/cli": "=5.9.7",
+    "@aragon/cli": "=6.3.0",
     "@aragon/test-helpers": "^1.0.1",
     "@babel/core": "^7.4.4",
     "@babel/polyfill": "^7.4.4",

@@ -257,7 +257,7 @@ function NewRequest({ network, panelOpened, onRequest }) {
       </Field>
       <ButtonWrapper>
         <Button wide mode="strong" type="submit" disabled={submitButtonDisabled}>
-          Submit request
+          Create request
         </Button>
       </ButtonWrapper>
       {depositErrorMessage && <ValidationError message={depositErrorMessage} />}
@@ -269,8 +269,10 @@ function NewRequest({ network, panelOpened, onRequest }) {
           </p>
         )}
         <p>
-          Configure your request above, and sign the transaction with your wallet after clicking “Submit Transfer”. It
-          will then show up in your Token request app once processed.
+          Configure your request above, and sign the transaction with your wallet after clicking “Create request”. It
+          will then show up in your Token request app once processed. It will need to be submitted by someone with
+          permission to create proposals, you will be able to withdraw your funds from the request at any time before
+          the proposal is approved.
         </p>
         {isTokenSelected && (
           <React.Fragment>
