@@ -73,7 +73,7 @@ class TokenSelector extends React.Component {
     return (
       this.props.tokens &&
       this.props.tokens.map(({ address, name, symbol, verified }) => (
-        <TokenSelectorInstance address={address} name={name} showIcon={verified} symbol={symbol} />
+        <TokenSelectorInstance showIcon={verified} symbol={symbol} />
       ))
     )
   }

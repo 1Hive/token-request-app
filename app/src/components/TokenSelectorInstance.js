@@ -6,15 +6,11 @@ import { addressesEqual, shortenAddress } from '../lib/web3-utils'
 
 class TokenSelectorInstance extends React.PureComponent {
   render() {
-    const { address, name, shorten, symbol, showIcon = true } = this.props
+    const { symbol, showIcon = true } = this.props
     return (
       <Main>
         {showIcon ? <Icon src={`https://chasing-coins.com/coin/logo/${symbol}`} /> : <IconSpacer />}
         {symbol && <TokenSymbol>{symbol}</TokenSymbol>}
-        {/* {name && <TokenName>({name})</TokenName>} */}
-        {/* {!addressesEqual(address, ETHER_TOKEN_FAKE_ADDRESS) && (
-          <StyledAddressBadge>{shortenAddress(address, shorten ? 5 : 10)}</StyledAddressBadge>
-        )} */}
       </Main>
     )
   }

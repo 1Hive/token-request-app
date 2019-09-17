@@ -13,7 +13,6 @@ import {
   Info,
   Link,
   unselectable,
-  font,
 } from '@aragon/ui'
 import { useAppState } from '@aragon/api-react'
 import { useAragonApi, useApi } from '@aragon/api-react'
@@ -341,18 +340,6 @@ const CombinedInput = styled.div`
     border-bottom-left-radius: 0;
   }
 `
-const StyledTextBlock = styled.div`
-  display: flex;
-  margin-bottom: ${0.5 * GU}px;
-  margin-bottom: 4px;
-  color: ${theme.textSecondary};
-  font-size: 12px;
-  font-weight: 600;
-  transform: 'uppercase';
-  line-height: 16px;
-  ${unselectable()};
-`
-
 const TokenBalance = styled.div`
   margin: 10px 0 20px;
 `
