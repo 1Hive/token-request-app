@@ -19,6 +19,7 @@ class TokenSelector extends React.Component {
     tokens: [],
     label: 'Token',
     labelCustomToken: 'Token address or symbol',
+    disabled: false,
   }
   state = {
     ...INITIAL_STATE,
@@ -69,27 +70,29 @@ class TokenSelector extends React.Component {
     return [...this.getTokenItems()]
   }
   getTokenItems() {
-    return this.props.tokens.map(({ address, name, symbol, verified }) => (
-      <TokenSelectorInstance address={address} name={name} showIcon={verified} symbol={symbol} />
-    ))
+    return (
+      this.props.tokens &&
+      this.props.tokens.map(({ address, name, symbol, verified }) => (
+        <TokenSelectorInstance showIcon={verified} symbol={symbol} />
+      ))
+    )
   }
   render() {
-    const { activeIndex, label } = this.props
+    const { activeIndex, label, disabled } = this.props
     const items = this.getItems()
     return (
       <React.Fragment>
-        <Field label={label}>
+        {items && (
           <DropDown
-            placeholder="Select a token"
+            placeholder="Token"
             items={items}
             selected={activeIndex}
             onChange={this.handleChange}
             header={label}
+            disabled={disabled}
             required
-            wide
-            width="390px"
           />
-        </Field>
+        )}
       </React.Fragment>
     )
   }

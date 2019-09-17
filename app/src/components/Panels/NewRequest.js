@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
-import { Button, Field, Text, TextInput, theme, GU, IconCross, useTheme, textStyle, Info, Link } from '@aragon/ui'
+import {
+  Button,
+  Field,
+  Text,
+  TextInput,
+  theme,
+  GU,
+  IconCross,
+  useTheme,
+  textStyle,
+  Info,
+  Link,
+  unselectable,
+} from '@aragon/ui'
 import { useAppState } from '@aragon/api-react'
 import { useAragonApi, useApi } from '@aragon/api-react'
 import TokenSelector from '../TokenSelector'
@@ -36,10 +49,11 @@ const initialState = {
   depositErrorMessage: '',
   submitButtonDisabled: false,
   isTokenSelected: false,
+  orgToken: [],
 }
 
 function NewRequest({ network, panelOpened, onRequest }) {
-  const { acceptedTokens, account, token } = useAppState()
+  const { acceptedTokens, account, token, ready } = useAppState()
   const api = useApi()
   const isMainnet = network.type === 'main'
 
@@ -51,6 +65,7 @@ function NewRequest({ network, panelOpened, onRequest }) {
   const [depositErrorMessage, setDepositErrorMessage] = useState(initialState.depositErrorMessage)
   const [submitButtonDisabled, setSubmitButtonDisabled] = useState(initialState.submitButtonDisabled)
   const [isTokenSelected, setIsTokenSelected] = useState(initialState.isTokenSelected)
+  const [orgToken, setOrgToken] = useState(initialState.orgToken)
 
   useEffect(() => {
     async function getSelectedTokenData() {
@@ -75,6 +90,18 @@ function NewRequest({ network, panelOpened, onRequest }) {
       setTokenBalanceMessage('')
     }
   }, [panelOpened])
+
+  useEffect(() => {
+    if (
+      token &&
+      !orgToken.find(element => {
+        return element.address === token.address
+      })
+    ) {
+      const tokens = orgToken.concat(token)
+      setOrgToken(tokens)
+    }
+  }, [token])
 
   useEffect(() => {
     let errorMessage
@@ -228,33 +255,38 @@ function NewRequest({ network, panelOpened, onRequest }) {
         margin-top: ${3 * GU}px;
       `}
     >
-      <TokenSelector activeIndex={selectedToken.index} onChange={handleSelectedToken} tokens={acceptedTokens} wide />
+      <Field label="Requested amount" required>
+        <CombinedInput>
+          <TextInput.Number
+            value={requestedAmount}
+            onChange={handleRequestedAmountUpdate}
+            min={0}
+            step="any"
+            required
+            wide
+          />
+          <TokenSelector activeIndex={0} onChange={() => {}} tokens={orgToken} disabled />
+        </CombinedInput>
+      </Field>
 
+      <Field label="Offered amount" required>
+        <CombinedInput>
+          <TextInput.Number
+            value={depositedAmount.value}
+            onChange={handleAmountUpdate}
+            min={0}
+            step="any"
+            required
+            wide
+          />
+          <TokenSelector activeIndex={selectedToken.index} onChange={handleSelectedToken} tokens={acceptedTokens} />
+        </CombinedInput>
+      </Field>
       <TokenBalance>
         <Text size="small" color={theme.textSecondary}>
           {tokenBalanceMessage}
         </Text>
       </TokenBalance>
-      <Field label="Amount">
-        <TextInput.Number
-          value={depositedAmount.value}
-          onChange={handleAmountUpdate}
-          min={0}
-          step="any"
-          required
-          wide
-        />
-      </Field>
-      <Field label="Requested Amount">
-        <TextInput.Number
-          value={requestedAmount}
-          onChange={handleRequestedAmountUpdate}
-          min={0}
-          step="any"
-          required
-          wide
-        />
-      </Field>
       <ButtonWrapper>
         <Button wide mode="strong" type="submit" disabled={submitButtonDisabled}>
           Create request
@@ -296,7 +328,18 @@ function NewRequest({ network, panelOpened, onRequest }) {
 const ButtonWrapper = styled.div`
   padding-top: 10px;
 `
-
+const CombinedInput = styled.div`
+  display: flex;
+  input[type='text'] {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: 0;
+  }
+  input[type='text'] + div > div:first-child {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+`
 const TokenBalance = styled.div`
   margin: 10px 0 20px;
 `
