@@ -11,10 +11,10 @@ class TokenSelectorInstance extends React.PureComponent {
       <Main>
         {showIcon ? <Icon src={`https://chasing-coins.com/coin/logo/${symbol}`} /> : <IconSpacer />}
         {symbol && <TokenSymbol>{symbol}</TokenSymbol>}
-        {name && <TokenName>({name})</TokenName>}
-        {!addressesEqual(address, ETHER_TOKEN_FAKE_ADDRESS) && (
+        {/* {name && <TokenName>({name})</TokenName>} */}
+        {/* {!addressesEqual(address, ETHER_TOKEN_FAKE_ADDRESS) && (
           <StyledAddressBadge>{shortenAddress(address, shorten ? 5 : 10)}</StyledAddressBadge>
-        )}
+        )} */}
       </Main>
     )
   }

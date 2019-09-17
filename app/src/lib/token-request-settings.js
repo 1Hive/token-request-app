@@ -1,4 +1,4 @@
-const tokenRequestSettings = [['acceptedTokens', 'acceptedTokens']]
+const tokenRequestSettings = [['token', 'token'], ['acceptedTokens', 'acceptedTokens']]
 
 export function hasLoadedtokenRequestSettings(state) {
   state = state || {}
