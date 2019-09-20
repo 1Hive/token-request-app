@@ -85,9 +85,7 @@ function initializeState(state, tokenManagerContract, tokens, settings) {
       const acceptedTokens = await getAcceptedTokens(tokens, settings)
       tokens.includes(ETHER_TOKEN_FAKE_ADDRESS) &&
         acceptedTokens.unshift({
-          decimals: '18',
-          name: 'Ether',
-          symbol: 'ETH',
+          ...ETHER_DATA,
           address: ETHER_TOKEN_FAKE_ADDRESS,
         })
       token && app.indentify(`token-request ${token.symbol}`)
