@@ -95,9 +95,12 @@ contract TokenRequest is AragonApp {
     * @param _token token address
     */
     function addToken(address _token) external auth(MODIFY_TOKENS_ROLE) {
-        require(isContract(_token), ERROR_ADDRESS_NOT_CONTRACT);
         require(!acceptedDepositTokens.contains(_token), ERROR_TOKEN_ALREADY_ACCEPTED);
 
+        if (_token != ETH) {
+            require(isContract(_token), ERROR_ADDRESS_NOT_CONTRACT);
+        }
+        
         acceptedDepositTokens.push(_token);
         require(acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
 
