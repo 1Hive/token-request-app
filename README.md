@@ -77,3 +77,13 @@ aragon dao install <dao-address> token-request.open.aragonpm.eth --app-init-args
 ```
 
 <br />
+
+## Contributing
+
+We welcome community contributions!
+
+Please check out our [open Issues]() to get started.
+
+If you discover something that could potentially impact security, please notify us immediately. The quickest way to reach us is via the #dev channel in our [team Keybase chat](https://1hive.org/contribute/keybase). Just say hi and that you discovered a potential security vulnerability and we'll DM you to discuss details.
+
+<br />
