@@ -6,27 +6,32 @@
 
 <br />
 
-## Using AppX
+## Using the Token Request app
 
-### Feature 1
+From a user's perspective there are three actions to take:
+- create a token request
+- submit a token request
+- withdraw a token request
 
-Info on feature 1.
+### Creating a Token Request
 
-<p align="center">
-    <img src="" width="600" />
-</p>
-
-### Feature 2
-
-Info on feature 2.
+Creating a token request is the first action for a user to take. This allows someone outside of the DAO to offer a deposit to receive some of the DAO's native tokens. Click on the blue "New Request" button in the top right of the app window. The "Requested Amount" section is the amount of the DAO's tokens that you want. The "Offered Amount" is the amount of tokens that you want to offer in exchange. If the DAO supports multiple tokens, you will be able to offer or request any of the available tokens. If you've configured the parameters correctly the "Create request" button should light up and be blue. Clicking on it will allow you to create a transaction for a new Token Request.
 
 <p align="center">
     <img src="" width="600" />
 </p>
 
-### Feature 3
+### Submitting a Token Request
 
-Info on feature 3.
+Once your Token Request is created you will see it in the main window of the app. The status should say `PENDING`. If you click on the "Actions" button you'll be able to" Submit" or "Withdraw" the Token Request. Your Token Request is not completed until you submit it. To submit your Token Request click "Submit" and then click the "Create transaction" button that appears in the signing side panel. This will create a transaction to submit the Token Request for the DAO's members to vote on.
+
+<p align="center">
+    <img src="" width="600" />
+</p>
+
+### Withdrawing a Token Request
+
+You can withdraw a
 
 <p align="center">
     <img src="" width="600" />
