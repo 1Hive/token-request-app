@@ -31,7 +31,7 @@ Once your Token Request is created you will see it in the main window of the app
 
 ### Withdrawing a Token Request
 
-You can withdraw a
+You can withdraw a Token Request at any time. This is done by clicking on the "Actoins" button in the main window, then selecting "Withdraw." You can do this for any Token Requests that you have created whether they were just created, submitted, and/or rejected. Once you click "Withdraw" you will be prompted to create a transaction. This will withdraw the Token Request and refund your deposit. Once a token is withdrawn the app's main window will show `WITHDRAWN` as the status of the Token Request.
 
 <p align="center">
     <img src="" width="600" />
