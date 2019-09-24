@@ -69,4 +69,11 @@ npm run start:template
 
 ## How to deploy to an organization
 
-TODO:
+Token Request app has been deployed to Rinkeby at `token-request.open.aragonpm.eth`
+
+To deploy to an Aragon DAO you can use the [Aragon CLI](https://hack.aragon.org/docs/cli-intro.html).
+```
+aragon dao install <dao-address> token-request.open.aragonpm.eth --app-init-args <vault-address> <token-manager-address>
+```
+
+<br />
