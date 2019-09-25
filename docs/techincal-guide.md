@@ -302,3 +302,75 @@ function getToken() internal returns (address) {
 ```
 
 <br />
+
+## Libraries
+
+TokenRequest.sol depends on two external libraries that have been developed by 1Hive for the purpose of this app.
+
+### AddressArrayLib
+
+`AddressArrayLib` allows us to extend an array of addresses with functionality to easily delete and look up items.
+```
+pragma solidity ^0.4.24;
+
+
+library AddressArrayLib {
+    function deleteItem(address[] storage self, address item) internal returns (bool) {
+        uint256 length = self.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (self[i] == item) {
+                uint256 newLength = self.length - 1;
+                if (i != newLength) {
+                    self[i] = self[newLength];
+                }
+
+                delete self[newLength];
+                self.length = newLength;
+
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function contains(address[] storage self, address item) internal returns (bool) {
+        for (uint256 i = 0; i < self.length; i++) {
+            if (self[i] == item) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+```
+
+### UintArrayLib
+
+`UintArrayLib` allows us to extend an array of uint256 with functionality to easily delete items.
+```
+pragma solidity ^0.4.24;
+
+
+library UintArrayLib {
+
+   function deleteItem(uint256[] storage self, uint256 item) internal returns (bool) {
+        uint256 length = self.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (self[i] == item) {
+                uint256 newLength = self.length - 1;
+                if (i != newLength) {
+                    self[i] = self[newLength];
+                }
+
+                delete self[newLength];
+                self.length = newLength;
+
+                return true;
+            }
+        }
+       return false;
+    }
+}
+```
+
+<br />
