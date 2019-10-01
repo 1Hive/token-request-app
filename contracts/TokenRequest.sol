@@ -9,9 +9,9 @@ import "./lib/UintArrayLib.sol";
 import "./lib/AddressArrayLib.sol";
 
 /**
-* Expected use requires the FINALISE_TOKEN_REQUEST_ROLE permission be given exclusively to a forwarder. A user can then
-* request tokens by calling createTokenRequest() to deposit funds and then calling finaliseTokenRequest() which will be called
-* via the forwarder if forwarding is successful, minting the user tokens.
+* The expected use of this app requires the FINALISE_TOKEN_REQUEST_ROLE permission be given exclusively to a forwarder.
+* A user can then request tokens by calling createTokenRequest() to deposit funds and then calling finaliseTokenRequest()
+* which will be called via the forwarder if forwarding is successful, minting the user tokens.
 */
 contract TokenRequest is AragonApp {
 
@@ -26,7 +26,7 @@ contract TokenRequest is AragonApp {
 
     string private constant ERROR_TOO_MANY_ACCEPTED_TOKENS = "TOKEN_REQUEST_TOO_MANY_ACCEPTED_TOKENS";
     string private constant ERROR_TOO_MANY_TOKEN_REQUESTS = "TOKEN_REQUEST_TOO_MANY_TOKEN_REQUESTS";
-    string private constant ERROR_TOKEN_ALREADY_ACCEPTED= "TOKEN_REQUEST_TOKEN_ALREADY_ACCEPTED";
+    string private constant ERROR_TOKEN_ALREADY_ACCEPTED = "TOKEN_REQUEST_TOKEN_ALREADY_ACCEPTED";
     string private constant ERROR_TOKEN_NOT_ACCEPTED = "TOKEN_REQUEST_TOKEN_NOT_ACCEPTED";
     string private constant ERROR_ADDRESS_NOT_CONTRACT = "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT";
     string private constant ERROR_NO_AMOUNT = "TOKEN_REQUEST_NO_AMOUNT";
@@ -63,7 +63,16 @@ contract TokenRequest is AragonApp {
     event TokenRequestFinalised(uint256 requestId, address requester, address depositToken, uint256 depositAmount, uint256 requestAmount);
 
     function initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens) external onlyInit {
+        require(isContract(_tokenManager), ERROR_ADDRESS_NOT_CONTRACT);
+        require(isContract(_vault), ERROR_ADDRESS_NOT_CONTRACT);
         require(_acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
+
+        for (uint256 i = 0; i < _acceptedDepositTokens.length; i++) {
+            address acceptedDepositToken = _acceptedDepositTokens[i];
+            if (acceptedDepositToken != ETH) {
+                require(isContract(acceptedDepositToken), ERROR_ADDRESS_NOT_CONTRACT);
+            }
+        }
 
         tokenManager = TokenManager(_tokenManager);
         vault = _vault;
@@ -77,6 +86,8 @@ contract TokenRequest is AragonApp {
     * @param _tokenManager The new token manager address
     */
     function setTokenManager(address _tokenManager) external auth(SET_TOKEN_MANAGER_ROLE) {
+        require(isContract(_tokenManager), ERROR_ADDRESS_NOT_CONTRACT);
+
         tokenManager = TokenManager(_tokenManager);
         emit SetTokenManager(_tokenManager);
     }
@@ -86,6 +97,8 @@ contract TokenRequest is AragonApp {
     * @param _vault The new vault address
     */
     function setVault(address _vault) external auth(SET_VAULT_ROLE) {
+        require(isContract(_vault), ERROR_ADDRESS_NOT_CONTRACT);
+
         vault = _vault;
         emit SetVault(_vault);
     }
@@ -96,13 +109,13 @@ contract TokenRequest is AragonApp {
     */
     function addToken(address _token) external auth(MODIFY_TOKENS_ROLE) {
         require(!acceptedDepositTokens.contains(_token), ERROR_TOKEN_ALREADY_ACCEPTED);
+        require(acceptedDepositTokens.length < MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
 
         if (_token != ETH) {
             require(isContract(_token), ERROR_ADDRESS_NOT_CONTRACT);
         }
-        
+
         acceptedDepositTokens.push(_token);
-        require(acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
 
         emit TokenAdded(_token);
     }
@@ -119,7 +132,6 @@ contract TokenRequest is AragonApp {
 
     /**
     * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, _depositToken.decimals(): uint256)` in exchange for `@tokenAmount(self.getToken(): address, _requestAmount, true, 18)`
-    * @dev Note the above radspec string seems to need to be on a single line. When split compile errors occur.
     * @param _depositToken Address of the token being deposited
     * @param _depositAmount Amount of the token being deposited
     * @param _requestAmount Amount of the token being requested
@@ -156,9 +168,10 @@ contract TokenRequest is AragonApp {
     */
     function refundTokenRequest(uint256 _tokenRequestId) external {
         TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
-        delete tokenRequests[_tokenRequestId];
-
         require(tokenRequestCopy.requesterAddress == msg.sender, ERROR_TOKEN_REQUEST_NOT_OWNER);
+
+        delete tokenRequests[_tokenRequestId];
+        addressesTokenRequestIds[msg.sender].deleteItem(_tokenRequestId);
 
         address refundToAddress = tokenRequestCopy.requesterAddress;
         address refundToken = tokenRequestCopy.depositToken;
@@ -170,8 +183,6 @@ contract TokenRequest is AragonApp {
             require(ERC20(refundToken).safeTransfer(refundToAddress, refundAmount), ERROR_TOKEN_TRANSFER_REVERTED);
         }
 
-        addressesTokenRequestIds[msg.sender].deleteItem(_tokenRequestId);
-
         emit TokenRequestRefunded(_tokenRequestId, refundToAddress, refundToken, refundAmount);
     }
 
@@ -179,17 +190,15 @@ contract TokenRequest is AragonApp {
     * @notice Finalise the token request with id `_tokenRequestId`, minting the requester funds and moving payment
               to the vault.
     * @dev This function's FINALISE_TOKEN_REQUEST_ROLE permission is typically given exclusively to a forwarder.
-    *      This contract also requires the MINT_ROLE on the TokenManager specified.
-    *      It is recommended the forwarder is granted the FINALISE_TOKEN_REQUEST_ROLE permission to call this function
-    *      before the MINT_ROLE permission on the TokenManager to prevent calling of this function before it has been
-    *      restricted appropriately.
+    *      This function requires the MINT_ROLE permission on the TokenManager specified.
     * @param _tokenRequestId ID of the Token Request
     */
     function finaliseTokenRequest(uint256 _tokenRequestId) external auth(FINALISE_TOKEN_REQUEST_ROLE) {
         TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
-        delete tokenRequests[_tokenRequestId];
-
         require(tokenRequestCopy.depositAmount > 0, ERROR_NO_DEPOSIT);
+
+        delete tokenRequests[_tokenRequestId];
+        addressesTokenRequestIds[requesterAddress].deleteItem(_tokenRequestId);
 
         address requesterAddress = tokenRequestCopy.requesterAddress;
         address depositToken = tokenRequestCopy.depositToken;
@@ -203,8 +212,6 @@ contract TokenRequest is AragonApp {
         }
 
         tokenManager.mint(requesterAddress, requestAmount);
-
-        addressesTokenRequestIds[requesterAddress].deleteItem(_tokenRequestId);
 
         emit TokenRequestFinalised(_tokenRequestId, requesterAddress, depositToken, depositAmount, requestAmount);
     }
@@ -228,9 +235,9 @@ contract TokenRequest is AragonApp {
         depositAmount = tokenRequest.depositAmount;
         requestAmount = tokenRequest.requestAmount;
     }
-    
+
     /**
-    * @dev convenience function for getting the token request token in a radspec string
+    * @dev Convenience function for getting the token request token in a radspec string
     */
     function getToken() internal returns (address) {
         return tokenManager.token();
