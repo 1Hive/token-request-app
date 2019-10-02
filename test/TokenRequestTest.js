@@ -16,7 +16,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
   let daoDeployment = new DaoDeployment()
   let requestableToken, tokenRequestBase, tokenRequest, tokenManager, tokenManagerBase, mockErc20, vaultBase, vault
 
-  let FINALISE_TOKEN_REQUEST_ROLE, MINT_ROLE, SET_TOKEN_MANAGER_ROLE, SET_VAULT_ROLE
+  let FINALISE_TOKEN_REQUEST_ROLE, MINT_ROLE, SET_TOKEN_MANAGER_ROLE, SET_VAULT_ROLE, MODIFY_TOKENS_ROLE
   const ETH_ADDRESS = '0x0000000000000000000000000000000000000000'
   let MOCK_TOKEN_BALANCE, ROOT_TOKEN_AMOUNT, ROOT_ETHER_AMOUNT
 
@@ -29,6 +29,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
     FINALISE_TOKEN_REQUEST_ROLE = await tokenRequestBase.FINALISE_TOKEN_REQUEST_ROLE()
     SET_TOKEN_MANAGER_ROLE = await tokenRequestBase.SET_TOKEN_MANAGER_ROLE()
     SET_VAULT_ROLE = await tokenRequestBase.SET_VAULT_ROLE()
+    MODIFY_TOKENS_ROLE = await tokenRequestBase.MODIFY_TOKENS_ROLE()
 
     tokenManagerBase = await TokenManager.new()
     MINT_ROLE = await tokenManagerBase.MINT_ROLE()
@@ -81,14 +82,30 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
     await tokenManager.initialize(requestableToken.address, false, 0)
 
     mockErc20 = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
-    //await mockErc20.transfer(rootAccount, ROOT_TOKEN_AMOUNT)
   })
 
-  describe('initialize(address _tokenManager, address _vault)', () => {
+  describe('initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens)', async () => {
+    it("reverts when passed non-contract address as token manager", async () => {
+      await assertRevert(tokenRequest.initialize(rootAccount, vault.address, []),
+        "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT")
+    })
+
+    it("reverts when passed non-contract address as vault", async () => {
+      await assertRevert(tokenRequest.initialize(tokenManager.address, rootAccount, []),
+        "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT")
+    })
+
+    it("reverts when passed non-contract address in accepted deposit tokens", async () => {
+      await assertRevert(tokenRequest.initialize(tokenManager.address, vault.address, [ETH_ADDRESS, rootAccount]),
+        "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT")
+    })
+  })
+
+  describe('initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens)', () => {
+    let acceptedDepositTokens
+
     beforeEach(async () => {
-      let acceptedDepositTokens = new Array(2)
-      acceptedDepositTokens[0] = mockErc20.address
-      acceptedDepositTokens[1] = ETH_ADDRESS
+      acceptedDepositTokens = [mockErc20.address, ETH_ADDRESS]
       await tokenRequest.initialize(tokenManager.address, vault.address, acceptedDepositTokens)
     })
 
@@ -101,25 +118,100 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
     })
 
     describe('setTokenManager(address _tokenManager)', () => {
-      it('sets a token manager', async () => {
-        const expectedTokenManagerAddress = accounts[2]
+      beforeEach(async () => {
         await daoDeployment.acl.createPermission(accounts[1], tokenRequest.address, SET_TOKEN_MANAGER_ROLE, rootAccount)
+      })
+
+      it('sets a token manager', async () => {
+        const expectedTokenManagerAddress = tokenManager.address
         await tokenRequest.setTokenManager(expectedTokenManagerAddress, { from: accounts[1] })
 
         const actualTokenManager = await tokenRequest.tokenManager()
         assert.strictEqual(actualTokenManager, expectedTokenManagerAddress)
       })
+
+      it('reverts when setting non-contract address', async () => {
+        await assertRevert(tokenRequest.setTokenManager(rootAccount, { from: accounts[1] }),
+          'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT')
+      })
     })
 
     describe('setVault(address _vault)', () => {
-      it('sets a vault', async () => {
-        const expectedVaultAddress = accounts[2]
+      beforeEach(async () => {
         await daoDeployment.acl.createPermission(accounts[1], tokenRequest.address, SET_VAULT_ROLE, rootAccount)
+      })
+
+      it('sets a vault', async () => {
+        const expectedVaultAddress = vault.address
         await tokenRequest.setVault(expectedVaultAddress, { from: accounts[1] })
 
         const actualVault = await tokenRequest.vault()
         assert.strictEqual(actualVault, expectedVaultAddress)
       })
+
+      it('reverts when setting non-contract address', async () => {
+        await assertRevert(tokenRequest.setVault(rootAccount, { from: accounts[1] }),
+          'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT')
+      })
+    })
+
+    describe('addToken(address _token)', async () => {
+      beforeEach(async () => {
+        await daoDeployment.acl.createPermission(accounts[1], tokenRequest.address, MODIFY_TOKENS_ROLE, rootAccount)
+      })
+
+      it('adds a token', async () => {
+        const newToken = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
+        const expectedTokens = [...acceptedDepositTokens, newToken.address]
+
+        await tokenRequest.addToken(newToken.address, { from: accounts[1] })
+
+        const actualTokens = await tokenRequest.getAcceptedDepositTokens()
+        assert.deepStrictEqual(actualTokens, expectedTokens)
+      })
+
+      it('cannot add more than max tokens', async () => {
+        const maxTokens = await tokenRequest.MAX_ACCEPTED_DEPOSIT_TOKENS();
+        for (let i = 0; i < maxTokens - 2; i++) {
+          const token = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
+          await tokenRequest.addToken(token.address, { from: accounts[1] })
+        }
+
+        const overflowToken = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
+        await assertRevert(tokenRequest.addToken(overflowToken.address, { from: accounts[1] }),
+          'TOKEN_REQUEST_TOO_MANY_ACCEPTED_TOKENS')
+      })
+
+      it('reverts when adding non-contract address', async () => {
+        await assertRevert(tokenRequest.addToken(rootAccount, { from: accounts[1] }),
+          'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT')
+      })
+
+      it('reverts when adding already added token', async () => {
+        await assertRevert(tokenRequest.addToken(ETH_ADDRESS, { from: accounts[1] }),
+          'TOKEN_REQUEST_TOKEN_ALREADY_ACCEPTED')
+      })
+    })
+
+    describe('removeToken(address _token)', async () => {
+      beforeEach(async () => {
+        await daoDeployment.acl.createPermission(accounts[1], tokenRequest.address, MODIFY_TOKENS_ROLE, rootAccount)
+      })
+
+      it('removes a token', async () => {
+        const expectedTokens = [ETH_ADDRESS]
+
+        await tokenRequest.removeToken(mockErc20.address, { from: accounts[1] })
+
+        const actualTokens = await tokenRequest.getAcceptedDepositTokens()
+        assert.deepStrictEqual(actualTokens, expectedTokens)
+      })
+
+      it('reverts when removing unaccepted token', async () => {
+        await assertRevert(tokenRequest.removeToken(rootAccount, { from: accounts[1] }),
+          'TOKEN_REQUEST_TOKEN_NOT_ACCEPTED')
+      })
+
     })
 
     describe('createTokenRequest(address _depositToken, uint256 _depositAmount, uint256 _requestAmount)', () => {
