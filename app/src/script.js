@@ -154,7 +154,7 @@ async function newTokenRequest(
 
 async function requestRefunded(state, { requestId }) {
   const { requests } = state
-  const nextStatus = requestStatus.WITHDRAWED
+  const nextStatus = requestStatus.WITHDRAWN
   return {
     ...state,
     requests: await updateRequestStatus(requests, requestId, nextStatus),
