@@ -1,13 +1,17 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import styled from 'styled-components'
 import { DataView, Text, ContextMenu, ContextMenuItem, IconCoin, theme, IconVote } from '@aragon/ui'
+import { useConnectedAccount } from '@aragon/api-react'
 import { formatTokenAmountSymbol } from '../lib/token-utils'
 import { format, compareDesc } from 'date-fns'
 import { requestStatus } from '../lib/constants'
+import LocalIdentityBadge from './LocalIdentityBadge/LocalIdentityBadge'
+import { addressesEqual } from '../lib/web3-utils'
 
 const PAGINATION = 10
 
-function RequestTable({ requests, token, onSubmit, onWithdraw }) {
+function RequestTable({ requests, token, onSubmit, onWithdraw, ownRequests }) {
+  const connectedAccount = useConnectedAccount()
   const handleSubmit = useCallback(
     requestId => {
       onSubmit(requestId)
@@ -21,66 +25,90 @@ function RequestTable({ requests, token, onSubmit, onWithdraw }) {
     },
     [onWithdraw]
   )
+  const fields = ['Request Date', 'Deposited', 'Requested', 'Status', 'Actions']
+  !ownRequests && fields.splice(1, 0, 'Requester')
+
+  const getEntries = useMemo(() => {
+    return requests.map(r => [
+      r.requestId,
+      r.date,
+      r.requesterAddress,
+      r.depositAmount,
+      r.depositSymbol,
+      r.depositToken,
+      r.depositName,
+      r.depositDecimals,
+      r.requestAmount,
+      r.status,
+      token.symbol,
+      token.decimals,
+    ])
+  }, [requests, compareDesc, ownRequests])
+
+  const getRow = (
+    requestId,
+    date,
+    requesterAddress,
+    depositAmount,
+    depositSymbol,
+    depositTokenAddress,
+    depositName,
+    depositDecimals,
+    requestedAmount,
+    status,
+    requestedSymbol,
+    requestedDecimals
+  ) => {
+    const timeColumn = [<time key={requestId}>{format(date, 'dd/MM/yy')}</time>]
+    const commonColumns = [
+      <Text>{`${formatTokenAmountSymbol(depositSymbol, depositAmount, false, depositDecimals)} `}</Text>,
+      <Text>{`${formatTokenAmountSymbol(requestedSymbol, requestedAmount, false, requestedDecimals)} `}</Text>,
+      <Status status={status}>{`${status}`}</Status>,
+      <ContextMenu disabled={status != requestStatus.PENDING}>
+        {status === requestStatus.PENDING && (
+          <ContextMenuItem onClick={() => handleSubmit(requestId)}>
+            <IconWrapper>
+              <IconVote />
+            </IconWrapper>
+            <div css="margin-left: 15px">Submit</div>
+          </ContextMenuItem>
+        )}
+        {status === requestStatus.PENDING && (
+          <ContextMenuItem onClick={() => handleWithdraw(requestId)}>
+            <IconWrapper>
+              <IconCoin />
+            </IconWrapper>
+            <div css="margin-left: 15px">Withdraw</div>
+          </ContextMenuItem>
+        )}
+      </ContextMenu>,
+    ]
+    return !ownRequests
+      ? [
+          timeColumn,
+          <div
+            css={`
+              display: flex;
+              align-items: flex-start;
+            `}
+          >
+            <LocalIdentityBadge
+              connectedAccount={addressesEqual(requesterAddress, connectedAccount)}
+              entity={requesterAddress}
+            />
+          </div>,
+          ...commonColumns,
+        ]
+      : [timeColumn, ...commonColumns]
+  }
 
   return (
     <>
       {requests && requests.length > 0 && (
         <DataView
-          fields={['Request Date', 'Deposited', 'Requested', 'Status', 'Actions']}
-          entries={requests
-            .sort(({ date: dateLeft }, { date: dateRight }) =>
-              // Sort by date descending
-              compareDesc(dateLeft, dateRight)
-            )
-            .map(r => [
-              r.requestId,
-              r.date,
-              r.depositAmount,
-              r.depositSymbol,
-              r.depositToken,
-              r.depositName,
-              r.depositDecimals,
-              r.requestAmount,
-              r.status,
-              token.symbol,
-              token.decimals,
-            ])}
-          renderEntry={([
-            requestId,
-            date,
-            depositAmount,
-            depositSymbol,
-            depositTokenAddress,
-            depositName,
-            depositDecimals,
-            requestedAmount,
-            status,
-            requestedSymbol,
-            requestedDecimals,
-          ]) => [
-            <time>{format(date, 'dd/MM/yy')}</time>,
-            <Text>{`${formatTokenAmountSymbol(depositSymbol, depositAmount, false, depositDecimals)} `}</Text>,
-            <Text>{`${formatTokenAmountSymbol(requestedSymbol, requestedAmount, false, requestedDecimals)} `}</Text>,
-            <Status status={status}>{`${status}`}</Status>,
-            <ContextMenu disabled={status != requestStatus.PENDING}>
-              {status === requestStatus.PENDING && (
-                <ContextMenuItem onClick={() => handleSubmit(requestId)}>
-                  <IconWrapper>
-                    <IconVote />
-                  </IconWrapper>
-                  <div css="margin-left: 15px">Submit</div>
-                </ContextMenuItem>
-              )}
-              {status === requestStatus.PENDING && (
-                <ContextMenuItem onClick={() => handleWithdraw(requestId)}>
-                  <IconWrapper>
-                    <IconCoin />
-                  </IconWrapper>
-                  <div css="margin-left: 15px">Withdraw</div>
-                </ContextMenuItem>
-              )}
-            </ContextMenu>,
-          ]}
+          fields={fields}
+          entries={getEntries}
+          renderEntry={request => getRow(...request)}
           mode="table"
           entriesPerPage={PAGINATION}
         />

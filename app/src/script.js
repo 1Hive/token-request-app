@@ -66,7 +66,7 @@ async function createStore(tokenManagerContract, tokens, settings) {
       }
     },
     {
-      init: initializeState({}, tokenManagerContract, tokens, settings),
+      init: initializeState(tokenManagerContract, tokens, settings),
     }
   )
 }
@@ -77,8 +77,8 @@ async function createStore(tokenManagerContract, tokens, settings) {
  *                     *
  ***********************/
 
-function initializeState(state, tokenManagerContract, tokens, settings) {
-  return async () => {
+function initializeState(tokenManagerContract, tokens, settings) {
+  return async cachedState => {
     try {
       const minimeAddress = await tokenManagerContract.token().toPromise()
       const token = await getTokenData(minimeAddress, settings)
@@ -90,7 +90,7 @@ function initializeState(state, tokenManagerContract, tokens, settings) {
         })
       token && app.indentify(`token-request ${token.symbol}`)
       return {
-        ...state,
+        ...cachedState,
         isSyncing: true,
         token,
         acceptedTokens: acceptedTokens,

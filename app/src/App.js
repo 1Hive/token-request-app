@@ -9,23 +9,11 @@ import requestIcon from './assets/icono.svg'
 import { ETHER_TOKEN_FAKE_ADDRESS } from './lib/token-utils'
 import Requests from './screens/Requests'
 import MainButton from './components/MainButton'
-
-const useRequests = (req, connectedAccount) => {
-  const userRequests = req.filter(request => request.requesterAddress === connectedAccount)
-  return { userRequests }
-}
+import { IdentityProvider } from './identity-manager'
 
 const App = () => {
   const { panelState, isSyncing, acceptedTokens, account, token, actions, requests } = useAppLogic()
   const [screenIndex, setScreenIndex] = useState(0)
-  const [userRequests, setUserRequests] = useState()
-
-  useEffect(() => {
-    if (requests) {
-      const filteredRequests = useRequests(requests, account)
-      setUserRequests(filteredRequests.userRequests)
-    }
-  }, [requests, screenIndex])
 
   const handleRequest = async (tokenAddress, depositAmount, requestedAmount) => {
     let intentParams
@@ -79,17 +67,13 @@ const App = () => {
         <TabsWrapper>
           <Tabs items={['Requests', 'My Requests']} selected={screenIndex} onChange={handleTabChange} />
         </TabsWrapper>
-        {screenIndex === 0 && (
-          <Requests requests={requests} token={token} onSubmit={handleSubmit} onWithdraw={handleWithdraw}></Requests>
-        )}
-        {screenIndex === 1 && (
-          <Requests
-            requests={userRequests}
-            token={token}
-            onSubmit={handleSubmit}
-            onWithdraw={handleWithdraw}
-          ></Requests>
-        )}
+        <Requests
+          requests={requests}
+          token={token}
+          onSubmit={handleSubmit}
+          onWithdraw={handleWithdraw}
+          ownRequests={screenIndex === 1}
+        />
       </>
 
       <SidePanel
@@ -110,7 +94,11 @@ const TabsWrapper = styled.div`
 
 export default () => {
   const { api, appState } = useAragonApi()
-  return <App api={api} {...appState} />
+  return (
+    <IdentityProvider>
+      <App api={api} {...appState} />
+    </IdentityProvider>
+  )
 }
 
 App.propTypes = {
