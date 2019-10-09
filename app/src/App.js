@@ -9,6 +9,7 @@ import requestIcon from './assets/icono.svg'
 import { ETHER_TOKEN_FAKE_ADDRESS } from './lib/token-utils'
 import Requests from './screens/Requests'
 import MainButton from './components/MainButton'
+import { IdentityProvider } from './identity-manager'
 
 const useRequests = (req, connectedAccount) => {
   const userRequests = req.filter(request => request.requesterAddress === connectedAccount)
@@ -80,7 +81,13 @@ const App = () => {
           <Tabs items={['Requests', 'My Requests']} selected={screenIndex} onChange={handleTabChange} />
         </TabsWrapper>
         {screenIndex === 0 && (
-          <Requests requests={requests} token={token} onSubmit={handleSubmit} onWithdraw={handleWithdraw}></Requests>
+          <Requests
+            requests={requests}
+            token={token}
+            onSubmit={handleSubmit}
+            onWithdraw={handleWithdraw}
+            ownRequests={false}
+          ></Requests>
         )}
         {screenIndex === 1 && (
           <Requests
@@ -88,6 +95,7 @@ const App = () => {
             token={token}
             onSubmit={handleSubmit}
             onWithdraw={handleWithdraw}
+            ownRequests
           ></Requests>
         )}
       </>
@@ -110,7 +118,11 @@ const TabsWrapper = styled.div`
 
 export default () => {
   const { api, appState } = useAragonApi()
-  return <App api={api} {...appState} />
+  return (
+    <IdentityProvider>
+      <App api={api} {...appState} />
+    </IdentityProvider>
+  )
 }
 
 App.propTypes = {
