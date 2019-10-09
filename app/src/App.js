@@ -11,22 +11,9 @@ import Requests from './screens/Requests'
 import MainButton from './components/MainButton'
 import { IdentityProvider } from './identity-manager'
 
-const useRequests = (req, connectedAccount) => {
-  const userRequests = req.filter(request => request.requesterAddress === connectedAccount)
-  return { userRequests }
-}
-
 const App = () => {
   const { panelState, isSyncing, acceptedTokens, account, token, actions, requests } = useAppLogic()
   const [screenIndex, setScreenIndex] = useState(0)
-  const [userRequests, setUserRequests] = useState()
-
-  useEffect(() => {
-    if (requests) {
-      const filteredRequests = useRequests(requests, account)
-      setUserRequests(filteredRequests.userRequests)
-    }
-  }, [requests, screenIndex])
 
   const handleRequest = async (tokenAddress, depositAmount, requestedAmount) => {
     let intentParams
@@ -80,24 +67,13 @@ const App = () => {
         <TabsWrapper>
           <Tabs items={['Requests', 'My Requests']} selected={screenIndex} onChange={handleTabChange} />
         </TabsWrapper>
-        {screenIndex === 0 && (
-          <Requests
-            requests={requests}
-            token={token}
-            onSubmit={handleSubmit}
-            onWithdraw={handleWithdraw}
-            ownRequests={false}
-          ></Requests>
-        )}
-        {screenIndex === 1 && (
-          <Requests
-            requests={userRequests}
-            token={token}
-            onSubmit={handleSubmit}
-            onWithdraw={handleWithdraw}
-            ownRequests
-          ></Requests>
-        )}
+        <Requests
+          requests={requests}
+          token={token}
+          onSubmit={handleSubmit}
+          onWithdraw={handleWithdraw}
+          ownRequests={screenIndex === 1}
+        />
       </>
 
       <SidePanel

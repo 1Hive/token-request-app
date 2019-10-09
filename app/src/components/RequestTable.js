@@ -25,47 +25,24 @@ function RequestTable({ requests, token, onSubmit, onWithdraw, ownRequests }) {
     },
     [onWithdraw]
   )
+  const fields = ['Request Date', 'Deposited', 'Requested', 'Status', 'Actions']
+  !ownRequests && fields.splice(1, 0, 'Requester')
 
   const getEntries = useMemo(() => {
-    console.log('ownRequests ', ownRequests)
-    return !ownRequests
-      ? requests
-          .sort(({ date: dateLeft }, { date: dateRight }) =>
-            // Sort by date descending
-            compareDesc(dateLeft, dateRight)
-          )
-          .map(r => [
-            r.requestId,
-            r.date,
-            r.requesterAddress,
-            r.depositAmount,
-            r.depositSymbol,
-            r.depositToken,
-            r.depositName,
-            r.depositDecimals,
-            r.requestAmount,
-            r.status,
-            token.symbol,
-            token.decimals,
-          ])
-      : requests
-          .sort(({ date: dateLeft }, { date: dateRight }) =>
-            // Sort by date descending
-            compareDesc(dateLeft, dateRight)
-          )
-          .map(r => [
-            r.requestId,
-            r.date,
-            r.depositAmount,
-            r.depositSymbol,
-            r.depositToken,
-            r.depositName,
-            r.depositDecimals,
-            r.requestAmount,
-            r.status,
-            token.symbol,
-            token.decimals,
-          ])
+    return requests.map(r => [
+      r.requestId,
+      r.date,
+      r.requesterAddress,
+      r.depositAmount,
+      r.depositSymbol,
+      r.depositToken,
+      r.depositName,
+      r.depositDecimals,
+      r.requestAmount,
+      r.status,
+      token.symbol,
+      token.decimals,
+    ])
   }, [requests, compareDesc, ownRequests])
 
   const getRow = (
@@ -124,74 +101,14 @@ function RequestTable({ requests, token, onSubmit, onWithdraw, ownRequests }) {
         ]
       : [timeColumn, ...commonColumns]
   }
+
   return (
     <>
       {requests && requests.length > 0 && (
         <DataView
-          fields={
-            ownRequests
-              ? ['Request Date', 'Deposited', 'Requested', 'Status', 'Actions']
-              : ['Request Date', 'Requester', 'Deposited', 'Requested', 'Status', 'Actions']
-          }
+          fields={fields}
           entries={getEntries}
-          renderEntry={
-            !ownRequests
-              ? ([
-                  requestId,
-                  date,
-                  requesterAddress,
-                  depositAmount,
-                  depositSymbol,
-                  depositTokenAddress,
-                  depositName,
-                  depositDecimals,
-                  requestedAmount,
-                  status,
-                  requestedSymbol,
-                  requestedDecimals,
-                ]) =>
-                  getRow(
-                    requestId,
-                    date,
-                    requesterAddress,
-                    depositAmount,
-                    depositSymbol,
-                    depositTokenAddress,
-                    depositName,
-                    depositDecimals,
-                    requestedAmount,
-                    status,
-                    requestedSymbol,
-                    requestedDecimals
-                  )
-              : ([
-                  requestId,
-                  date,
-                  depositAmount,
-                  depositSymbol,
-                  depositTokenAddress,
-                  depositName,
-                  depositDecimals,
-                  requestedAmount,
-                  status,
-                  requestedSymbol,
-                  requestedDecimals,
-                ]) =>
-                  getRow(
-                    requestId,
-                    date,
-                    '',
-                    depositAmount,
-                    depositSymbol,
-                    depositTokenAddress,
-                    depositName,
-                    depositDecimals,
-                    requestedAmount,
-                    status,
-                    requestedSymbol,
-                    requestedDecimals
-                  )
-          }
+          renderEntry={request => getRow(...request)}
           mode="table"
           entriesPerPage={PAGINATION}
         />
