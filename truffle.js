@@ -1,8 +1,6 @@
 /**
  * https://github.com/aragon/aragonOS/blob/v4.0.0/truffle-config.js
  */
-require('@babel/register')
-require('@babel/polyfill')
 
 const homedir = require('homedir')
 const path = require('path')
