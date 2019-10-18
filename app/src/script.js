@@ -80,6 +80,7 @@ async function createStore(tokenManagerContract, tokens, settings) {
 function initializeState(tokenManagerContract, tokens, settings) {
   return async cachedState => {
     try {
+
       const minimeAddress = await tokenManagerContract.token().toPromise()
       const token = await getTokenData(minimeAddress, settings)
       const acceptedTokens = await getAcceptedTokens(tokens, settings)
@@ -94,7 +95,6 @@ function initializeState(tokenManagerContract, tokens, settings) {
         isSyncing: true,
         token,
         acceptedTokens: acceptedTokens,
-        requests: [],
       }
     } catch (error) {
       console.error('Error initializing state: ', error)
@@ -123,7 +123,7 @@ async function newTokenRequest(
   blockNumber
 ) {
   try {
-    const { requests } = state
+    const { requests = [] } = state
     const { decimals, name, symbol } =
       depositToken === ETHER_TOKEN_FAKE_ADDRESS ? ETHER_DATA : await getTokenData(depositToken, settings)
 
