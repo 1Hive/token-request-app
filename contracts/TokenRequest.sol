@@ -175,10 +175,12 @@ contract TokenRequest is AragonApp {
         address refundToken = tokenRequestCopy.depositToken;
         uint256 refundAmount = tokenRequestCopy.depositAmount;
 
-        if (refundToken == ETH) {
-            refundToAddress.transfer(refundAmount);
-        } else {
-            require(ERC20(refundToken).safeTransfer(refundToAddress, refundAmount), ERROR_TOKEN_TRANSFER_REVERTED);
+        if (refundAmount > 0) {
+            if (refundToken == ETH) {
+                refundToAddress.transfer(refundAmount);
+            } else {
+                require(ERC20(refundToken).safeTransfer(refundToAddress, refundAmount), ERROR_TOKEN_TRANSFER_REVERTED);
+            }
         }
 
         emit TokenRequestRefunded(_tokenRequestId, refundToAddress, refundToken, refundAmount);
