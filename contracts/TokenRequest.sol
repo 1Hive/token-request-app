@@ -32,7 +32,7 @@ contract TokenRequest is AragonApp {
     string private constant ERROR_TOKEN_REQUEST_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
-    string private constant ERROR_REQUEST_NOT_EXIST = "TOKEN_REQUEST_REQUEST_NOT_EXIST";
+    string private constant ERROR_REQUEST_NOT_EXIST = "TOKEN_REQUEST_NO_REQUEST";
 
     uint256 public constant MAX_ACCEPTED_DEPOSIT_TOKENS = 100;
     uint256 public constant MAX_ADDRESS_TOKEN_REQUEST_IDS = 100;

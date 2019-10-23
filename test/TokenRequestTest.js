@@ -351,6 +351,24 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         assert.equal(actualVaultBalance, expectedVaultBalance)
       })
 
+      it('finalise token request (ETH) when 0 is deposited', async () => {
+        const expectedUserMiniMeBalance = 300
+        const expectedVaultBalance = 0
+
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, {
+          from: rootAccount,
+          value: expectedVaultBalance,
+        })
+
+        await forwarderMock.forward(script, { from: rootAccount })
+
+        const actualUserMiniMeBalance = await tokenManager.spendableBalanceOf(rootAccount)
+        const actualVaultBalance = await vault.balance(ETH_ADDRESS)
+
+        assert.equal(actualUserMiniMeBalance, expectedUserMiniMeBalance)
+        assert.equal(actualVaultBalance, expectedVaultBalance)
+      })
+
       it('it should not finalise the same request twice', async () => {
         const expectedUserMiniMeBalance = 300
         const expectedVaultBalance = 200
@@ -367,7 +385,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         await forwarderMock.forward(script, { from: rootAccount })
 
-        await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_REQUEST_NOT_EXIST')
+        await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_NO_REQUEST')
       })
     })
 
@@ -396,6 +414,33 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         const request = await tokenRequest.createTokenRequest(ETH_ADDRESS, weiValue, 1, {
           value: weiValue,
+          from: refundEthAccount,
+        })
+
+        const requestTransaction = await web3.eth.getTransaction(request.tx)
+        const requestGasUsed = new BN(request.receipt.gasUsed)
+        const requestTransactionGasPrice = new BN(requestTransaction.gasPrice)
+        const requestPrice = new BN(requestGasUsed.mul(requestTransactionGasPrice))
+
+        const refund = await tokenRequest.refundTokenRequest(0, { from: refundEthAccount })
+        const refundTransaction = await web3.eth.getTransaction(refund.tx)
+
+        const refundGasUsed = new BN(refund.receipt.gasUsed)
+        const refundGasPrice = new BN(refundTransaction.gasPrice)
+        const refundPrice = new BN(refundGasUsed.mul(refundGasPrice))
+
+        let actualBalance = new BN(await web3.eth.getBalance(refundEthAccount))
+        const actualETHBalance = actualBalance.add(refundPrice).add(requestPrice)
+
+        assert.equal(actualETHBalance, expectedETHBalance)
+      })
+
+      it('refund 0 ETH when 0 is deposited', async () => {
+        const zeroWei = 0
+        const expectedETHBalance = await web3.eth.getBalance(refundEthAccount)
+
+        const request = await tokenRequest.createTokenRequest(ETH_ADDRESS, zeroWei, 1, {
+          value: zeroWei,
           from: refundEthAccount,
         })
 
