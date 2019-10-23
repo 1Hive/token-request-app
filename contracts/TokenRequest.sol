@@ -29,9 +29,7 @@ contract TokenRequest is AragonApp {
     string private constant ERROR_TOKEN_ALREADY_ACCEPTED = "TOKEN_REQUEST_TOKEN_ALREADY_ACCEPTED";
     string private constant ERROR_TOKEN_NOT_ACCEPTED = "TOKEN_REQUEST_TOKEN_NOT_ACCEPTED";
     string private constant ERROR_ADDRESS_NOT_CONTRACT = "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT";
-    string private constant ERROR_NO_AMOUNT = "TOKEN_REQUEST_NO_AMOUNT";
     string private constant ERROR_TOKEN_REQUEST_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
-    string private constant ERROR_NO_DEPOSIT = "TOKEN_REQUEST_NO_DEPOSIT";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
 
@@ -143,7 +141,6 @@ contract TokenRequest is AragonApp {
     {
         require(acceptedDepositTokens.contains(_depositToken), ERROR_TOKEN_NOT_ACCEPTED);
         require(addressesTokenRequestIds[msg.sender].length < MAX_ADDRESS_TOKEN_REQUEST_IDS, ERROR_TOO_MANY_TOKEN_REQUESTS);
-        require(_depositAmount > 0, ERROR_NO_AMOUNT);
 
         if (_depositToken == ETH) {
             require(msg.value == _depositAmount, ERROR_ETH_VALUE_MISMATCH);
@@ -195,7 +192,6 @@ contract TokenRequest is AragonApp {
     */
     function finaliseTokenRequest(uint256 _tokenRequestId) external auth(FINALISE_TOKEN_REQUEST_ROLE) {
         TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
-        require(tokenRequestCopy.depositAmount > 0, ERROR_NO_DEPOSIT);
 
         delete tokenRequests[_tokenRequestId];
         addressesTokenRequestIds[requesterAddress].deleteItem(_tokenRequestId);
@@ -205,10 +201,12 @@ contract TokenRequest is AragonApp {
         uint256 depositAmount = tokenRequestCopy.depositAmount;
         uint256 requestAmount = tokenRequestCopy.requestAmount;
 
-        if (depositToken == ETH) {
-            vault.transfer(depositAmount);
-        } else {
-            require(ERC20(depositToken).safeTransfer(vault, depositAmount), ERROR_TOKEN_TRANSFER_REVERTED);
+        if (depositAmount > 0) {
+            if (depositToken == ETH) {
+                vault.transfer(depositAmount);
+            } else {
+                require(ERC20(depositToken).safeTransfer(vault, depositAmount), ERROR_TOKEN_TRANSFER_REVERTED);
+            }
         }
 
         tokenManager.mint(requesterAddress, requestAmount);
