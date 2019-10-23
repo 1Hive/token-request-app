@@ -131,7 +131,7 @@ contract TokenRequest is AragonApp {
     }
 
     /**
-    * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, _depositToken.decimals(): uint256)` in exchange for `@tokenAmount(self.getToken(): address, _requestAmount, true, 18)`
+    * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, 18)` in exchange for `@tokenAmount(self.getToken(): address, _requestAmount, true, 18)`
     * @param _depositToken Address of the token being deposited
     * @param _depositAmount Amount of the token being deposited
     * @param _requestAmount Amount of the token being requested
@@ -239,7 +239,7 @@ contract TokenRequest is AragonApp {
     /**
     * @dev Convenience function for getting the token request token in a radspec string
     */
-    function getToken() internal returns (address) {
+    function getToken() public returns (address) {
         return tokenManager.token();
     }
 
