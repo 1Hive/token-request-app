@@ -8,7 +8,7 @@ function appStateReducer(state) {
     return { ...state, ready }
   }
 
-  const { requests } = state
+  const { requests = [] } = state
 
   return {
     ...state,
