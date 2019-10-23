@@ -252,15 +252,6 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId)
       })
 
-      it('should not create a new request for 0 Ether', async () => {
-        await assertRevert(
-          tokenRequest.createTokenRequest(ETH_ADDRESS, 0, 1, {
-            value: 0,
-          }),
-          'TOKEN_REQUEST_NO_AMOUNT'
-        )
-      })
-
       it('should not create a new request with different _depositAmount and value', async () => {
         await assertRevert(
           tokenRequest.createTokenRequest(ETH_ADDRESS, 100, 1, {
@@ -359,6 +350,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         assert.equal(actualUserMiniMeBalance, expectedUserMiniMeBalance)
         assert.equal(actualVaultBalance, expectedVaultBalance)
       })
+
       it('it should not finalise the same request twice', async () => {
         const expectedUserMiniMeBalance = 300
         const expectedVaultBalance = 200
@@ -375,7 +367,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         await forwarderMock.forward(script, { from: rootAccount })
 
-        await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_NO_DEPOSIT')
+        await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_REQUEST_NOT_EXIST')
       })
     })
 
