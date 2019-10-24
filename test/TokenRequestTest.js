@@ -110,14 +110,13 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT'
       )
     })
-    it('reverts when acceptedDepositTokens length is more than max tokens', async () => {
+    it('reverts when passed token list with more tokens than the max accepted', async () => {
       const maxTokens = await tokenRequest.MAX_ACCEPTED_DEPOSIT_TOKENS()
       let tokenList = []
       for (let i = 0; i < maxTokens + 1; i++) {
         const token = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
         tokenList.push(token.address)
       }
-      // console.log('token listttttt ', tokenList)
       await assertRevert(
         tokenRequest.initialize(tokenManager.address, vault.address, tokenList),
         'TOKEN_REQUEST_TOO_MANY_ACCEPTED_TOKENS'
@@ -469,18 +468,18 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         const requestTransaction = await web3.eth.getTransaction(request.tx)
         const requestGasUsed = new BN(request.receipt.gasUsed)
-        const requestTransactionGasPrice = new BN(requestTransaction.gasPrice)
-        const requestPrice = new BN(requestGasUsed.mul(requestTransactionGasPrice))
+        const requestGasPrice = new BN(requestTransaction.gasPrice)
+        const requestFee = new BN(requestGasUsed.mul(requestGasPrice))
 
         const refund = await tokenRequest.refundTokenRequest(0, { from: refundEthAccount })
         const refundTransaction = await web3.eth.getTransaction(refund.tx)
 
         const refundGasUsed = new BN(refund.receipt.gasUsed)
         const refundGasPrice = new BN(refundTransaction.gasPrice)
-        const refundPrice = new BN(refundGasUsed.mul(refundGasPrice))
+        const refundFee = new BN(refundGasUsed.mul(refundGasPrice))
 
         let actualBalance = new BN(await web3.eth.getBalance(refundEthAccount))
-        const actualETHBalance = actualBalance.add(refundPrice).add(requestPrice)
+        const actualETHBalance = actualBalance.add(refundFee).add(requestFee)
 
         assert.equal(actualETHBalance, expectedETHBalance)
       })
