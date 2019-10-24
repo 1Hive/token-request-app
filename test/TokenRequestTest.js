@@ -110,6 +110,18 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT'
       )
     })
+    it('reverts when passed token list with more tokens than the max accepted', async () => {
+      const maxTokens = await tokenRequest.MAX_ACCEPTED_DEPOSIT_TOKENS()
+      let tokenList = []
+      for (let i = 0; i < maxTokens + 1; i++) {
+        const token = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
+        tokenList.push(token.address)
+      }
+      await assertRevert(
+        tokenRequest.initialize(tokenManager.address, vault.address, tokenList),
+        'TOKEN_REQUEST_TOO_MANY_ACCEPTED_TOKENS'
+      )
+    })
   })
 
   describe('initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens)', () => {
@@ -185,6 +197,16 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         assert.deepStrictEqual(actualTokens, expectedTokens)
       })
 
+      it('adds ETH to acceptedDepositTokens', async () => {
+        await tokenRequest.removeToken(ETH_ADDRESS, { from: accounts[1] })
+        const expectedTokens = [...acceptedDepositTokens]
+
+        await tokenRequest.addToken(ETH_ADDRESS, { from: accounts[1] })
+
+        const actualTokens = await tokenRequest.getAcceptedDepositTokens()
+        assert.deepStrictEqual(actualTokens, expectedTokens)
+      })
+
       it('cannot add more than max tokens', async () => {
         const maxTokens = await tokenRequest.MAX_ACCEPTED_DEPOSIT_TOKENS()
         for (let i = 0; i < maxTokens - 2; i++) {
@@ -250,15 +272,6 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         assert.equal(actualEtherBalance, expectedEtherBalance)
         assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId)
-      })
-
-      it('should not create a new request for 0 Ether', async () => {
-        await assertRevert(
-          tokenRequest.createTokenRequest(ETH_ADDRESS, 0, 1, {
-            value: 0,
-          }),
-          'TOKEN_REQUEST_NO_AMOUNT'
-        )
       })
 
       it('should not create a new request with different _depositAmount and value', async () => {
@@ -359,6 +372,25 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         assert.equal(actualUserMiniMeBalance, expectedUserMiniMeBalance)
         assert.equal(actualVaultBalance, expectedVaultBalance)
       })
+
+      it('finalise token request (ETH) when 0 is deposited', async () => {
+        const expectedUserMiniMeBalance = 300
+        const expectedVaultBalance = 0
+
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, {
+          from: rootAccount,
+          value: expectedVaultBalance,
+        })
+
+        await forwarderMock.forward(script, { from: rootAccount })
+
+        const actualUserMiniMeBalance = await tokenManager.spendableBalanceOf(rootAccount)
+        const actualVaultBalance = await vault.balance(ETH_ADDRESS)
+
+        assert.equal(actualUserMiniMeBalance, expectedUserMiniMeBalance)
+        assert.equal(actualVaultBalance, expectedVaultBalance)
+      })
+
       it('it should not finalise the same request twice', async () => {
         const expectedUserMiniMeBalance = 300
         const expectedVaultBalance = 200
@@ -375,7 +407,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         await forwarderMock.forward(script, { from: rootAccount })
 
-        await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_NO_DEPOSIT')
+        await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_NO_REQUEST')
       })
     })
 
@@ -421,6 +453,33 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         let actualBalance = new BN(await web3.eth.getBalance(refundEthAccount))
         const actualETHBalance = actualBalance.add(refundPrice).add(requestPrice)
+
+        assert.equal(actualETHBalance, expectedETHBalance)
+      })
+
+      it('refund 0 ETH when 0 is deposited', async () => {
+        const zeroWei = 0
+        const expectedETHBalance = await web3.eth.getBalance(refundEthAccount)
+
+        const request = await tokenRequest.createTokenRequest(ETH_ADDRESS, zeroWei, 1, {
+          value: zeroWei,
+          from: refundEthAccount,
+        })
+
+        const requestTransaction = await web3.eth.getTransaction(request.tx)
+        const requestGasUsed = new BN(request.receipt.gasUsed)
+        const requestGasPrice = new BN(requestTransaction.gasPrice)
+        const requestFee = new BN(requestGasUsed.mul(requestGasPrice))
+
+        const refund = await tokenRequest.refundTokenRequest(0, { from: refundEthAccount })
+        const refundTransaction = await web3.eth.getTransaction(refund.tx)
+
+        const refundGasUsed = new BN(refund.receipt.gasUsed)
+        const refundGasPrice = new BN(refundTransaction.gasPrice)
+        const refundFee = new BN(refundGasUsed.mul(refundGasPrice))
+
+        let actualBalance = new BN(await web3.eth.getBalance(refundEthAccount))
+        const actualETHBalance = actualBalance.add(refundFee).add(requestFee)
 
         assert.equal(actualETHBalance, expectedETHBalance)
       })

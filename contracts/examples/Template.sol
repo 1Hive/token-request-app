@@ -21,7 +21,7 @@ import "@aragon/apps-token-manager/contracts/TokenManager.sol";
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
 import "@aragon/os/contracts/common/EtherTokenConstant.sol";
 
-import "./TokenRequest.sol";
+import "../TokenRequest.sol";
 
 
 contract TemplateBase is APMNamehash {
@@ -130,12 +130,12 @@ contract Template is TemplateBase {
         acl.grantPermission(voting, tokenManager, tokenManager.MINT_ROLE());
         acl.revokePermission(this, tokenManager, tokenManager.MINT_ROLE());
         acl.setPermissionManager(root, tokenManager, tokenManager.MINT_ROLE());
-        
+
 
         emit DeployDao(dao);
     }
 
-    function initApps(Vault vault, TokenManager tokenManager, TokenRequest tokenRequest, Voting voting, MiniMeToken token, MiniMeToken testToken) internal { 
+    function initApps(Vault vault, TokenManager tokenManager, TokenRequest tokenRequest, Voting voting, MiniMeToken token, MiniMeToken testToken) internal {
         vault.initialize();
         tokenManager.initialize(token, true, 0);
         address[] memory tokenList = new address[](2);
@@ -145,7 +145,7 @@ contract Template is TemplateBase {
         voting.initialize(token, 50 * PCT, 20 * PCT, 1 days);
     }
 
-    function createTokenForUser(address root, MiniMeTokenFactory tokenFactory, TokenRequest tokenRequest, MiniMeToken testToken) internal {       
+    function createTokenForUser(address root, MiniMeTokenFactory tokenFactory, TokenRequest tokenRequest, MiniMeToken testToken) internal {
         testToken.generateTokens(root, 300e18);
         testToken.changeController(root);
     }
