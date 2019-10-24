@@ -129,7 +129,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
     let acceptedDepositTokens
 
     beforeEach(async () => {
-      acceptedDepositTokens = [mockErc20.address]
+      acceptedDepositTokens = [mockErc20.address, ETH_ADDRESS]
       await tokenRequest.initialize(tokenManager.address, vault.address, acceptedDepositTokens)
     })
 
@@ -199,7 +199,8 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
       })
 
       it('adds ETH to acceptedDepositTokens', async () => {
-        const expectedTokens = [...acceptedDepositTokens, ETH_ADDRESS]
+        await tokenRequest.removeToken(ETH_ADDRESS, { from: accounts[1] })
+        const expectedTokens = [...acceptedDepositTokens]
 
         await tokenRequest.addToken(ETH_ADDRESS, { from: accounts[1] })
 
@@ -209,7 +210,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
       it('cannot add more than max tokens', async () => {
         const maxTokens = await tokenRequest.MAX_ACCEPTED_DEPOSIT_TOKENS()
-        for (let i = 0; i < maxTokens - 1; i++) {
+        for (let i = 0; i < maxTokens - 2; i++) {
           const token = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
           await tokenRequest.addToken(token.address, { from: accounts[1] })
         }
@@ -230,7 +231,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
       it('reverts when adding already added token', async () => {
         await assertRevert(
-          tokenRequest.addToken(mockErc20.address, { from: accounts[1] }),
+          tokenRequest.addToken(ETH_ADDRESS, { from: accounts[1] }),
           'TOKEN_REQUEST_TOKEN_ALREADY_ACCEPTED'
         )
       })
