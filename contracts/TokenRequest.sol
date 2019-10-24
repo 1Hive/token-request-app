@@ -131,7 +131,7 @@ contract TokenRequest is AragonApp {
     }
 
     /**
-    * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, 18)` in exchange for `@tokenAmount(self.getToken(): address, _requestAmount, true, 18)`
+    * @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true)` in exchange for `@tokenAmount(self.getToken(): address, _requestAmount, true)`
     * @param _depositToken Address of the token being deposited
     * @param _depositAmount Amount of the token being deposited
     * @param _requestAmount Amount of the token being requested
@@ -163,7 +163,7 @@ contract TokenRequest is AragonApp {
     }
 
     /**
-    * @notice Refund the deposit for token request with id `_tokenRequestId` to the creators account.
+    * @notice Refund `@tokenAmount(self.getTokenRequest(_tokenRequestId): (address, <address>), self.getTokenRequest(_tokenRequestId): (address, address, <uint>, uint))` to `self.getTokenRequest(_tokenRequestId): address`, this will invalidate the request for `@tokenAmount(self.getToken(): address, self.getTokenRequest(_tokenRequestId): (address, address, uint, <uint>))`
     * @param _tokenRequestId ID of the Token Request
     */
     function refundTokenRequest(uint256 _tokenRequestId) external {
@@ -187,8 +187,7 @@ contract TokenRequest is AragonApp {
     }
 
     /**
-    * @notice Finalise the token request with id `_tokenRequestId`, minting the requester funds and moving payment
-              to the vault.
+    * @notice Approve  `self.getTokenRequest(_tokenRequestId): address`'s request for `@tokenAmount(self.getToken(): address, self.getTokenRequest(_tokenRequestId): (address, address, uint, <uint>))` in exchange for `@tokenAmount(self.getTokenRequest(_tokenRequestId): (address, <address>), self.getTokenRequest(_tokenRequestId): (address, address, <uint>, uint))`
     * @dev This function's FINALISE_TOKEN_REQUEST_ROLE permission is typically given exclusively to a forwarder.
     *      This function requires the MINT_ROLE permission on the TokenManager specified.
     * @param _tokenRequestId ID of the Token Request
