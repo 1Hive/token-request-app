@@ -121,7 +121,6 @@ async function newTokenRequest(
   settings,
   blockNumber
 ) {
-  console.log('SCRIPT DEPOSIT ', depositAmount)
   try {
     const { requests = [] } = state
     const { decimals, name, symbol } =
