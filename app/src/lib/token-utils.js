@@ -91,15 +91,8 @@ export async function getTokenDecimals(app, address) {
   return tokenDecimals || null
 }
 
-export const formatTokenAmountSymbol = (
-  symbol,
-  amount,
-  isIncoming,
-  decimals,
-  displaySign = false,
-  { rounding = 2 } = {}
-) => {
-  const formattedAmount = formatTokenAmount(amount, isIncoming, decimals)
+export const formatTokenAmountSymbol = (symbol, amount, isIncoming, decimals, rounding = 2, displaySign = false) => {
+  const formattedAmount = formatTokenAmount(amount, isIncoming, decimals, rounding)
 
   return `${formattedAmount} ${symbol}`
 }

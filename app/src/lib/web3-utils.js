@@ -1,5 +1,8 @@
 import { toChecksumAddress, hexToNumber } from 'web3-utils'
 
+const ETH_ADDRESS_SPLIT_REGEX = /(0x[a-fA-F0-9]{40}(?:\b|\.|,|\?|!|;))/g
+const ETH_ADDRESS_TEST_REGEX = /(0x[a-fA-F0-9]{40}(?:\b|\.|,|\?|!|;))/g
+
 // Check address equality without checksums
 export function addressesEqual(first, second) {
   first = first && toChecksumAddress(first)
@@ -31,6 +34,12 @@ export function shortenAddress(address, charsLength = 4) {
     return address
   }
   return address.slice(0, charsLength + prefixLength) + '…' + address.slice(-charsLength)
+}
+
+export function transformAddresses(str, callback) {
+  return str
+    .split(ETH_ADDRESS_SPLIT_REGEX)
+    .map((part, index) => callback(part, ETH_ADDRESS_TEST_REGEX.test(part), index))
 }
 
 // Re-export some web3-utils functions

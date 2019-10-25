@@ -80,7 +80,6 @@ async function createStore(tokenManagerContract, tokens, settings) {
 function initializeState(tokenManagerContract, tokens, settings) {
   return async cachedState => {
     try {
-
       const minimeAddress = await tokenManagerContract.token().toPromise()
       const token = await getTokenData(minimeAddress, settings)
       const acceptedTokens = await getAcceptedTokens(tokens, settings)
@@ -122,6 +121,7 @@ async function newTokenRequest(
   settings,
   blockNumber
 ) {
+  console.log('SCRIPT DEPOSIT ', depositAmount)
   try {
     const { requests = [] } = state
     const { decimals, name, symbol } =
