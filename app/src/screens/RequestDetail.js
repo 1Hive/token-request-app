@@ -47,7 +47,7 @@ const RequestDetail = ({ request, token, onBack, onSubmit, onWithdraw }) => {
   const requestFormated = formatTokenAmount(requestAmount, false, token.decimals, token.decimals)
   const depositRounded = formatTokenAmountSymbol(depositSymbol, depositAmount, false, depositDecimals, 2)
   const requestRounded = formatTokenAmountSymbol(token.symbol, requestAmount, false, token.decimals, 2)
-  const title = `#${requestId} Recipient requests ${requestRounded} for ${depositRounded}`
+  const title = `#${requestId} ${requestRounded} requested by`
   const description = ` Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`
   const formatDate = date => `${format(date, 'do MMM yy, HH:mm')} UTC`
   const statusColor = getStatusColor(status, theme).toString()
@@ -87,7 +87,22 @@ const RequestDetail = ({ request, token, onBack, onSubmit, onWithdraw }) => {
                   ${textStyle('title2')};
                 `}
               >
-                <span css='font-weight: bold;'>{title}</span>
+                <div
+                  css={`
+                    font-weight: bold;
+                    display: flex;
+                    align-items: center;
+                  `}
+                >
+                  {title}
+                  <LocalIdentityBadge
+                    css={`
+                      margin-left: ${1 * GU}px;
+                    `}
+                    connectedAccount={addressesEqual(requesterAddress, connectedAccount)}
+                    entity={requesterAddress}
+                  />
+                </div>
               </h1>
               <div
                 css={`
