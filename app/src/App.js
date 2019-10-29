@@ -17,7 +17,6 @@ const App = () => {
     panelState,
     isSyncing,
     acceptedTokens,
-    account,
     token,
     actions,
     requests,
@@ -109,7 +108,11 @@ const App = () => {
         onClose={panelState.requestClose}
         onTransitionEnd={panelState.endTransition}
       >
-        <NewRequest panelOpened={panelState.opened} tokens={acceptedTokens} onRequest={handleRequest}></NewRequest>
+        <NewRequest
+          panelOpened={panelState.opened}
+          acceptedTokens={acceptedTokens}
+          onRequest={handleRequest}
+        ></NewRequest>
       </SidePanel>
     </Main>
   )

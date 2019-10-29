@@ -79,7 +79,7 @@ export function useWithdrawAction(onDone) {
 }
 
 export function useAppLogic() {
-  const { acceptedTokens, account, token, isSyncing, ready, requests } = useAppState()
+  const { account, token, isSyncing, ready, requests, acceptedTokens = [] } = useAppState()
   const [selectedRequest, selectRequest] = useSelectedRequest(requests)
   const panelState = useSidePanel()
 

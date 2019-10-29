@@ -10,7 +10,7 @@ import { addressesEqual } from '../lib/web3-utils'
 
 const PAGINATION = 10
 
-function RequestTable({ requests, token, onSubmit, onWithdraw, ownRequests, onSelectRequest }) {
+const RequestTable = React.memo(({ requests, token, onSubmit, onWithdraw, ownRequests, onSelectRequest }) => {
   const connectedAccount = useConnectedAccount()
   const theme = useTheme()
 
@@ -130,7 +130,7 @@ function RequestTable({ requests, token, onSubmit, onWithdraw, ownRequests, onSe
       )}
     </>
   )
-}
+})
 
 const getStatusColor = (status, theme) => {
   switch (status) {

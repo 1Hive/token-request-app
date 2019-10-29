@@ -27,7 +27,7 @@ app
   )
 
 async function initialize(tokenManagerAddress) {
-  let tokens
+  let tokens = []
   const network = await app
     .network()
     .pipe(first())
@@ -83,6 +83,7 @@ function initializeState(tokenManagerContract, tokens, settings) {
       const minimeAddress = await tokenManagerContract.token().toPromise()
       const token = await getTokenData(minimeAddress, settings)
       const acceptedTokens = await getAcceptedTokens(tokens, settings)
+
       tokens.includes(ETHER_TOKEN_FAKE_ADDRESS) &&
         acceptedTokens.unshift({
           ...ETHER_DATA,
@@ -93,7 +94,7 @@ function initializeState(tokenManagerContract, tokens, settings) {
         ...cachedState,
         isSyncing: true,
         token,
-        acceptedTokens: acceptedTokens,
+        acceptedTokens,
       }
     } catch (error) {
       console.error('Error initializing state: ', error)

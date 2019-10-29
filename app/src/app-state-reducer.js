@@ -8,10 +8,11 @@ function appStateReducer(state) {
     return { ...state, ready }
   }
 
-  const { requests = [] } = state
+  const { requests = [], acceptedTokens = [] } = state
 
   return {
     ...state,
+    acceptedTokens,
     ready,
     requests: requests.sort(({ date: dateLeft }, { date: dateRight }) =>
       // Sort by date descending
