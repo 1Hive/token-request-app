@@ -70,8 +70,8 @@ const RequestTable = React.memo(({ requests, token, onSubmit, onWithdraw, ownReq
   ) => {
     const timeColumn = [<time key={requestId}>{format(date, 'dd/MM/yy')}</time>]
     const commonColumns = [
-      <Text>{`${formatTokenAmountSymbol(depositSymbol, depositAmount, false, depositDecimals)} `}</Text>,
-      <Text>{`${formatTokenAmountSymbol(requestedSymbol, requestedAmount, false, requestedDecimals)} `}</Text>,
+      <Text>{`${formatTokenAmountSymbol(depositSymbol, depositAmount, depositDecimals)} `}</Text>,
+      <Text>{`${formatTokenAmountSymbol(requestedSymbol, requestedAmount, requestedDecimals)} `}</Text>,
       <Status color={getStatusColor(status, theme).toString()}>{`${status}`}</Status>,
       <ContextMenu>
         <ContextMenuItem onClick={() => handleSelectRequest(requestId)}>
@@ -124,7 +124,7 @@ const RequestTable = React.memo(({ requests, token, onSubmit, onWithdraw, ownReq
           fields={fields}
           entries={getEntries}
           renderEntry={request => getRow(...request)}
-          mode='table'
+          mode='adaptive'
           entriesPerPage={PAGINATION}
         />
       )}

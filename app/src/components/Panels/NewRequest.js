@@ -50,8 +50,8 @@ const initialState = {
   orgToken: [],
 }
 
-const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest }) => {
-  const { account, token } = useAppState()
+const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest, connectedAccount }) => {
+  const { token } = useAppState()
   const network = useNetwork()
   const api = useApi()
   const isMainnet = network.type === 'main'
@@ -65,12 +65,14 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest }) => {
   const [orgToken, setOrgToken] = useState(initialState.orgToken)
 
   useEffect(() => {
-    if (selectedToken.index === -1) {
-      setSelectedToken({
-        ...initialState.selectedToken,
-        index: acceptedTokens.length > 0 ? 0 : initialState.selectedToken.index,
-        value: acceptedTokens.length > 0 ? acceptedTokens[0].address : initialState.selectedToken.value,
-      })
+    if (acceptedTokens && acceptedTokens.length > 0) {
+      if (selectedToken.index === -1) {
+        setSelectedToken({
+          ...initialState.selectedToken,
+          index: acceptedTokens.length > 0 ? 0 : initialState.selectedToken.index,
+          value: acceptedTokens.length > 0 ? acceptedTokens[0].address : initialState.selectedToken.value,
+        })
+      }
     }
   }, [acceptedTokens])
 
@@ -98,7 +100,7 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest }) => {
       })
       setDepositedAmount({ ...initialState.amount })
       setRequestedAmount('')
-      setTokenBalanceMessage('')
+      //setTokenBalanceMessage('')
     }
   }, [panelOpened])
 
@@ -142,7 +144,6 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest }) => {
       e.preventDefault()
       const depositAmount = toDecimals(depositedAmount.value, selectedToken.data.decimals)
       const requested = toDecimals(requestedAmount, Number(token.decimals))
-
       onRequest(selectedToken.value, depositAmount, requested)
     },
     [onRequest, token, selectedToken, depositedAmount, requestedAmount]
@@ -181,7 +182,7 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest }) => {
     // ETH
     if (addressesEqual(address, ETHER_TOKEN_FAKE_ADDRESS)) {
       const userBalance = await api
-        .web3Eth('getBalance', account)
+        .web3Eth('getBalance', connectedAccount)
         .toPromise()
         .catch(() => '-1')
 
@@ -197,7 +198,7 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest }) => {
     const token = api.external(address, tokenAbi)
 
     const userBalance = await token
-      .balanceOf(account)
+      .balanceOf(connectedAccount)
       .toPromise()
       .catch(() => '-1')
 

@@ -14,6 +14,11 @@ export function formatDecimals(value, digits) {
   }
 }
 
+export function formatDisplayAmount(amount, decimals) {
+  const number = amount / Math.pow(10, decimals)
+  return number.toFixed(2)
+}
+
 export function formatTokenAmount(amount, isIncoming, decimals = 0, rounding, displaySign = false) {
   return (
     (displaySign ? (isIncoming ? '+' : '-') : '') + formatDecimals(round(amount / Math.pow(10, decimals), rounding), 18)

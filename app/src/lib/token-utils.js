@@ -5,7 +5,7 @@ import tokenSymbolBytesAbi from '../abi/token-symbol-bytes.json'
 import tokenNameAbi from '../abi/token-name.json'
 import tokenNameBytesAbi from '../abi/token-name-bytes.json'
 import tokenDecimalsAbi from '../abi/token-decimals.json'
-import { formatTokenAmount } from './math-utils'
+import { formatDisplayAmount } from './math-utils'
 
 // Some known tokens don’t strictly follow ERC-20 and it would be difficult to
 // adapt to every situation. The data listed in this map is used as a fallback
@@ -91,8 +91,8 @@ export async function getTokenDecimals(app, address) {
   return tokenDecimals || null
 }
 
-export const formatTokenAmountSymbol = (symbol, amount, isIncoming, decimals, rounding = 2, displaySign = false) => {
-  const formattedAmount = formatTokenAmount(amount, isIncoming, decimals, rounding)
+export const formatTokenAmountSymbol = (symbol, amount, decimals) => {
+  const formattedAmount = formatDisplayAmount(amount, decimals)
 
   return `${formattedAmount} ${symbol}`
 }
