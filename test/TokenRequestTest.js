@@ -8,6 +8,7 @@ const Vault = artifacts.require('Vault')
 
 const deployDAO = require('./helpers/deployDAO')
 const { deployedContract, assertRevert } = require('./helpers/helpers')
+const { getEventArgument } = require('@aragon/test-helpers/events')
 const { encodeCallScript } = require('@aragon/test-helpers/evmScript')
 const { hash: nameHash } = require('eth-ens-namehash')
 const getBalanceFn = require('@aragon/test-helpers/balance')
@@ -264,15 +265,16 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         const expectedEtherBalance = 2000
         const expectedNextTokenRequestId = 1
 
-        await tokenRequest.createTokenRequest(ETH_ADDRESS, ROOT_ETHER_AMOUNT, 1, REFERENCE, {
+        const receipt = await tokenRequest.createTokenRequest(ETH_ADDRESS, ROOT_ETHER_AMOUNT, 1, REFERENCE, {
           value: ROOT_ETHER_AMOUNT,
         })
-
+        const actualReference = getEventArgument(receipt, 'TokenRequestCreated', 'reference')
         const actualEtherBalance = (await getBalance(tokenRequest.address)).valueOf()
         const actualNextTokenRequestId = await tokenRequest.nextTokenRequestId()
 
         assert.equal(actualEtherBalance, expectedEtherBalance)
         assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId)
+        assert.equal(actualReference, REFERENCE)
       })
 
       it('should not create a new request with different _depositAmount and value', async () => {
@@ -292,14 +294,15 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
           from: rootAccount,
         })
 
-        await tokenRequest.createTokenRequest(mockErc20.address, ROOT_TOKEN_AMOUNT, 300, REFERENCE)
-
+        const receipt = await tokenRequest.createTokenRequest(mockErc20.address, ROOT_TOKEN_AMOUNT, 300, REFERENCE)
+        const actualReference = getEventArgument(receipt, 'TokenRequestCreated', 'reference')
         const actualTokenRequestBalance = await mockErc20.balanceOf(tokenRequest.address)
 
         const actualNextTokenRequestId = await tokenRequest.nextTokenRequestId()
 
         assert.equal(actualTokenRequestBalance, expectedTokenRequestBalance)
         assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId)
+        assert.equal(actualReference, REFERENCE)
       })
 
       it('should not create a new request without token approve', async () => {
