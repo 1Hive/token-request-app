@@ -8,6 +8,7 @@ const Vault = artifacts.require('Vault')
 
 const deployDAO = require('./helpers/deployDAO')
 const { deployedContract, assertRevert } = require('./helpers/helpers')
+const { getEventArgument } = require('@aragon/test-helpers/events')
 const { encodeCallScript } = require('@aragon/test-helpers/evmScript')
 const { hash: nameHash } = require('eth-ens-namehash')
 const getBalanceFn = require('@aragon/test-helpers/balance')
@@ -24,6 +25,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
   const ROOT_TOKEN_AMOUNT = 100
   const MOCK_TOKEN_BALANCE = 100000
   const getBalance = getBalanceFn(web3)
+  const REFERENCE = 'This is a token request test.'
 
   before('deploy base apps', async () => {
     tokenRequestBase = await TokenRequest.new()
@@ -258,25 +260,26 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
       })
     })
 
-    describe('createTokenRequest(address _depositToken, uint256 _depositAmount, uint256 _requestAmount)', () => {
+    describe('createTokenRequest(address _depositToken, uint256 _depositAmount, uint256 _requestAmount, string _reference)', () => {
       it('creates a new token request in exchange for Ether', async () => {
         const expectedEtherBalance = 2000
         const expectedNextTokenRequestId = 1
 
-        await tokenRequest.createTokenRequest(ETH_ADDRESS, ROOT_ETHER_AMOUNT, 1, {
+        const receipt = await tokenRequest.createTokenRequest(ETH_ADDRESS, ROOT_ETHER_AMOUNT, 1, REFERENCE, {
           value: ROOT_ETHER_AMOUNT,
         })
-
+        const actualReference = getEventArgument(receipt, 'TokenRequestCreated', 'reference')
         const actualEtherBalance = (await getBalance(tokenRequest.address)).valueOf()
         const actualNextTokenRequestId = await tokenRequest.nextTokenRequestId()
 
         assert.equal(actualEtherBalance, expectedEtherBalance)
         assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId)
+        assert.equal(actualReference, REFERENCE)
       })
 
       it('should not create a new request with different _depositAmount and value', async () => {
         await assertRevert(
-          tokenRequest.createTokenRequest(ETH_ADDRESS, 100, 1, {
+          tokenRequest.createTokenRequest(ETH_ADDRESS, 100, 1, REFERENCE, {
             value: 50,
           }),
           'TOKEN_REQUEST_ETH_VALUE_MISMATCH'
@@ -291,19 +294,20 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
           from: rootAccount,
         })
 
-        await tokenRequest.createTokenRequest(mockErc20.address, ROOT_TOKEN_AMOUNT, 300)
-
+        const receipt = await tokenRequest.createTokenRequest(mockErc20.address, ROOT_TOKEN_AMOUNT, 300, REFERENCE)
+        const actualReference = getEventArgument(receipt, 'TokenRequestCreated', 'reference')
         const actualTokenRequestBalance = await mockErc20.balanceOf(tokenRequest.address)
 
         const actualNextTokenRequestId = await tokenRequest.nextTokenRequestId()
 
         assert.equal(actualTokenRequestBalance, expectedTokenRequestBalance)
         assert.equal(actualNextTokenRequestId, expectedNextTokenRequestId)
+        assert.equal(actualReference, REFERENCE)
       })
 
       it('should not create a new request without token approve', async () => {
         await assertRevert(
-          tokenRequest.createTokenRequest(mockErc20.address, 100, 1),
+          tokenRequest.createTokenRequest(mockErc20.address, 100, 1, REFERENCE),
           'TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED'
         )
       })
@@ -342,9 +346,15 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         await mockErc20.approve(tokenRequest.address, ROOT_TOKEN_AMOUNT, {
           from: rootAccount,
         })
-        await tokenRequest.createTokenRequest(mockErc20.address, expectedVaultBalance, expectedUserMiniMeBalance, {
-          from: rootAccount,
-        })
+        await tokenRequest.createTokenRequest(
+          mockErc20.address,
+          expectedVaultBalance,
+          expectedUserMiniMeBalance,
+          REFERENCE,
+          {
+            from: rootAccount,
+          }
+        )
 
         await forwarderMock.forward(script, { from: rootAccount })
 
@@ -359,7 +369,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         const expectedUserMiniMeBalance = 300
         const expectedVaultBalance = 200
 
-        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, {
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, REFERENCE, {
           from: rootAccount,
           value: expectedVaultBalance,
         })
@@ -377,7 +387,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         const expectedUserMiniMeBalance = 300
         const expectedVaultBalance = 0
 
-        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, {
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, REFERENCE, {
           from: rootAccount,
           value: expectedVaultBalance,
         })
@@ -395,12 +405,12 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         const expectedUserMiniMeBalance = 300
         const expectedVaultBalance = 200
 
-        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, {
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, REFERENCE, {
           from: rootAccount,
           value: expectedVaultBalance,
         })
 
-        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, {
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, REFERENCE, {
           from: rootAccount,
           value: expectedVaultBalance,
         })
@@ -420,7 +430,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         await mockErc20.approve(tokenRequest.address, refundAmount, {
           from: rootAccount,
         })
-        await tokenRequest.createTokenRequest(mockErc20.address, refundAmount, 1, {
+        await tokenRequest.createTokenRequest(mockErc20.address, refundAmount, 1, REFERENCE, {
           from: rootAccount,
         })
 
@@ -434,7 +444,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         const weiValue = 3000000000000000
         const expectedETHBalance = await web3.eth.getBalance(refundEthAccount)
 
-        const request = await tokenRequest.createTokenRequest(ETH_ADDRESS, weiValue, 1, {
+        const request = await tokenRequest.createTokenRequest(ETH_ADDRESS, weiValue, 1, REFERENCE, {
           value: weiValue,
           from: refundEthAccount,
         })
@@ -461,7 +471,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         const zeroWei = 0
         const expectedETHBalance = await web3.eth.getBalance(refundEthAccount)
 
-        const request = await tokenRequest.createTokenRequest(ETH_ADDRESS, zeroWei, 1, {
+        const request = await tokenRequest.createTokenRequest(ETH_ADDRESS, zeroWei, 1, REFERENCE, {
           value: zeroWei,
           from: refundEthAccount,
         })
@@ -488,7 +498,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         await mockErc20.approve(tokenRequest.address, ROOT_TOKEN_AMOUNT, {
           from: rootAccount,
         })
-        await tokenRequest.createTokenRequest(mockErc20.address, ROOT_TOKEN_AMOUNT, 1, {
+        await tokenRequest.createTokenRequest(mockErc20.address, ROOT_TOKEN_AMOUNT, 1, REFERENCE, {
           from: rootAccount,
         })
 
@@ -497,7 +507,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
       it('should not refund the same request twice', async () => {
         const weiValue = 1000000000000000
-        await tokenRequest.createTokenRequest(ETH_ADDRESS, weiValue, 1, {
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, weiValue, 1, REFERENCE, {
           value: weiValue,
           from: refundEthAccount,
         })
