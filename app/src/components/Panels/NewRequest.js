@@ -69,8 +69,8 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest, connect
       if (selectedToken.index === -1) {
         setSelectedToken({
           ...initialState.selectedToken,
-          index: acceptedTokens.length > 0 ? 0 : initialState.selectedToken.index,
-          value: acceptedTokens.length > 0 ? acceptedTokens[0].address : initialState.selectedToken.value,
+          index: 0,
+          value: acceptedTokens[0].address,
         })
       }
     }
