@@ -118,7 +118,7 @@ async function updateConnectedAccount(state, { account }) {
 
 async function newTokenRequest(
   state,
-  { requestId, requesterAddress, depositToken, depositAmount, requestAmount },
+  { requestId, requesterAddress, depositToken, depositAmount, requestAmount, reference },
   settings,
   blockNumber
 ) {
@@ -142,6 +142,7 @@ async function newTokenRequest(
           depositSymbol: symbol,
           depositAmount,
           requestAmount,
+          reference,
           status: requestStatus.PENDING,
           date: marshallDate(timestamp),
         },
