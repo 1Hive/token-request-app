@@ -44,6 +44,7 @@ const initialState = {
     value: '',
     data: {},
   },
+  reference: '',
   depositErrorMessage: '',
   submitButtonDisabled: false,
   isTokenSelected: false,
@@ -57,6 +58,7 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest, connect
   const isMainnet = network.type === 'main'
   const [selectedToken, setSelectedToken] = useState({ ...initialState.selectedToken })
   const [depositedAmount, setDepositedAmount] = useState({ ...initialState.amount })
+  const [reference, setReference] = useState(initialState.reference)
   const [requestedAmount, setRequestedAmount] = useState('')
   const [tokenBalanceMessage, setTokenBalanceMessage] = useState('')
   const [depositErrorMessage, setDepositErrorMessage] = useState(initialState.depositErrorMessage)
@@ -100,7 +102,7 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest, connect
       })
       setDepositedAmount({ ...initialState.amount })
       setRequestedAmount('')
-      //setTokenBalanceMessage('')
+      setReference(initialState.reference)
     }
   }, [panelOpened])
 
@@ -144,9 +146,9 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest, connect
       e.preventDefault()
       const depositAmount = toDecimals(depositedAmount.value, selectedToken.data.decimals)
       const requested = toDecimals(requestedAmount, Number(token.decimals))
-      onRequest(selectedToken.value, depositAmount, requested)
+      onRequest(selectedToken.value, depositAmount, requested, reference)
     },
-    [onRequest, token, selectedToken, depositedAmount, requestedAmount]
+    [onRequest, token, selectedToken, depositedAmount, requestedAmount, reference]
   )
 
   const handleRequestedAmountUpdate = useCallback(e => {
@@ -163,6 +165,10 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest, connect
     },
     [depositedAmount]
   )
+
+  const handleReferenceUpdate = useCallback(e => {
+    setReference(e.target.value)
+  })
 
   const handleSelectedToken = useCallback(({ address, index, value }) => {
     const tokenIsAddress = isAddress(address)
@@ -303,6 +309,9 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest, connect
           {tokenBalanceMessage}
         </Text>
       </TokenBalance>
+      <Field label='Reference (optional)'>
+        <TextInput onChange={handleReferenceUpdate} value={reference} wide />
+      </Field>
       <ButtonWrapper>
         <Button wide mode='strong' type='submit' disabled={submitButtonDisabled}>
           Create request
