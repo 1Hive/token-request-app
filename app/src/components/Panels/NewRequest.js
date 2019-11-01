@@ -95,11 +95,14 @@ const NewRequest = React.memo(({ panelOpened, acceptedTokens, onRequest, connect
 
   useEffect(() => {
     if (!panelOpened) {
-      setSelectedToken({
-        ...initialState.selectedToken,
-        index: acceptedTokens.length > 0 ? 0 : initialState.selectedToken.index,
-        value: acceptedTokens.length > 0 ? acceptedTokens[0].address : initialState.selectedToken.value,
-      })
+      if (acceptedTokens.length > 0) {
+        setSelectedToken(token => ({
+          ...initialState.selectedToken,
+          data: { ...token.data },
+          index: 0,
+          value: acceptedTokens[0].address
+        }))
+      }
       setDepositedAmount({ ...initialState.amount })
       setRequestedAmount('')
       setReference(initialState.reference)
