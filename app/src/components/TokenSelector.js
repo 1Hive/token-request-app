@@ -84,7 +84,7 @@ class TokenSelector extends React.Component {
       <React.Fragment>
         {items && (
           <DropDown
-            placeholder="Token"
+            placeholder='Token'
             items={items}
             selected={activeIndex}
             onChange={this.handleChange}

@@ -4,7 +4,7 @@ import RequestTable from '../components/RequestTable'
 import { useConnectedAccount } from '@aragon/api-react'
 import { addressesEqual } from '../lib/web3-utils'
 
-const Requests = React.memo(({ requests, token, onSubmit, onWithdraw, ownRequests }) => {
+const Requests = React.memo(({ requests, token, onSubmit, onWithdraw, ownRequests, onSelectRequest }) => {
   const filteredRequests = ownRequests
     ? requests && requests.filter(r => addressesEqual(r.requesterAddress, useConnectedAccount()))
     : requests
@@ -15,6 +15,7 @@ const Requests = React.memo(({ requests, token, onSubmit, onWithdraw, ownRequest
       onSubmit={onSubmit}
       onWithdraw={onWithdraw}
       ownRequests={ownRequests}
+      onSelectRequest={onSelectRequest}
     />
   ) : (
     <Box style={{ textAlign: 'center' }}>

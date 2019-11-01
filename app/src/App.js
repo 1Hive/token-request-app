@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useCallback } from 'react'
 import styled from 'styled-components'
 import PropTypes from 'prop-types'
 import { useAragonApi } from '@aragon/api-react'
@@ -8,12 +8,23 @@ import { useAppLogic } from './hooks/app-hooks'
 import requestIcon from './assets/icono.svg'
 import { ETHER_TOKEN_FAKE_ADDRESS } from './lib/token-utils'
 import Requests from './screens/Requests'
+import RequestDetail from './screens/RequestDetail'
 import MainButton from './components/MainButton'
 import { IdentityProvider } from './identity-manager'
 
 const App = () => {
-  const { panelState, isSyncing, acceptedTokens, account, token, actions, requests } = useAppLogic()
+  const {
+    panelState,
+    isSyncing,
+    acceptedTokens,
+    token,
+    actions,
+    requests,
+    selectRequest,
+    selectedRequest,
+  } = useAppLogic()
   const [screenIndex, setScreenIndex] = useState(0)
+  const handleBack = useCallback(() => selectRequest(-1), [selectRequest])
 
   const handleRequest = async (tokenAddress, depositAmount, requestedAmount) => {
     let intentParams
@@ -54,35 +65,54 @@ const App = () => {
     <Main>
       <SyncIndicator visible={isSyncing} />
       <Header
-        primary="Token Request"
+        primary='Token Request'
         secondary={
-          <MainButton
-            label="New Request"
-            onClick={panelState.requestOpen}
-            icon={<img src={requestIcon} height="30px" alt="" />}
-          />
+          !selectedRequest && (
+            <MainButton
+              label='New Request'
+              onClick={panelState.requestOpen}
+              icon={<img src={requestIcon} height='30px' alt='' />}
+            />
+          )
         }
       />
       <>
-        <TabsWrapper>
-          <Tabs items={['Requests', 'My Requests']} selected={screenIndex} onChange={handleTabChange} />
-        </TabsWrapper>
-        <Requests
-          requests={requests}
-          token={token}
-          onSubmit={handleSubmit}
-          onWithdraw={handleWithdraw}
-          ownRequests={screenIndex === 1}
-        />
+        {selectedRequest ? (
+          <RequestDetail
+            request={selectedRequest}
+            token={token}
+            onBack={handleBack}
+            onSubmit={handleSubmit}
+            onWithdraw={handleWithdraw}
+          />
+        ) : (
+          <>
+            <TabsWrapper>
+              <Tabs items={['Requests', 'My Requests']} selected={screenIndex} onChange={handleTabChange} />
+            </TabsWrapper>
+            <Requests
+              requests={requests}
+              token={token}
+              onSubmit={handleSubmit}
+              onWithdraw={handleWithdraw}
+              ownRequests={screenIndex === 1}
+              onSelectRequest={selectRequest}
+            />
+          </>
+        )}
       </>
 
       <SidePanel
-        title="New request"
+        title='New request'
         opened={panelState.visible}
         onClose={panelState.requestClose}
         onTransitionEnd={panelState.endTransition}
       >
-        <NewRequest panelOpened={panelState.opened} tokens={acceptedTokens} onRequest={handleRequest}></NewRequest>
+        <NewRequest
+          panelOpened={panelState.opened}
+          acceptedTokens={acceptedTokens}
+          onRequest={handleRequest}
+        ></NewRequest>
       </SidePanel>
     </Main>
   )
