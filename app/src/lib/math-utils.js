@@ -16,6 +16,9 @@ export function formatDecimals(value, digits) {
 
 export function formatDisplayAmount(amount, decimals) {
   const number = amount / Math.pow(10, decimals)
+  const [whole, dec] = splitDecimalNumber(number.toString())
+  if (!dec)
+    return number
   return number.toFixed(2)
 }
 
