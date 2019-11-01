@@ -57,7 +57,7 @@ contract TokenRequest is AragonApp {
     event SetVault(address vault);
     event TokenAdded(address indexed token);
     event TokenRemoved(address indexed token);
-    event TokenRequestCreated(uint256 requestId, address requesterAddress, address depositToken, uint256 depositAmount, uint256 requestAmount);
+    event TokenRequestCreated(uint256 requestId, address requesterAddress, address depositToken, uint256 depositAmount, uint256 requestAmount, string reference);
     event TokenRequestRefunded(uint256 requestId, address refundToAddress, address refundToken, uint256 refundAmount);
     event TokenRequestFinalised(uint256 requestId, address requester, address depositToken, uint256 depositAmount, uint256 requestAmount);
 
@@ -134,8 +134,9 @@ contract TokenRequest is AragonApp {
     * @param _depositToken Address of the token being deposited
     * @param _depositAmount Amount of the token being deposited
     * @param _requestAmount Amount of the token being requested
+    * @param _reference String detailing request reason
     */
-    function createTokenRequest(address _depositToken, uint256 _depositAmount, uint256 _requestAmount)
+    function createTokenRequest(address _depositToken, uint256 _depositAmount, uint256 _requestAmount, string _reference)
     external
     payable
     returns (uint256)
@@ -155,7 +156,7 @@ contract TokenRequest is AragonApp {
         tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount);
         addressesTokenRequestIds[msg.sender].push(tokenRequestId);
 
-        emit TokenRequestCreated(tokenRequestId, msg.sender, _depositToken, _depositAmount, _requestAmount);
+        emit TokenRequestCreated(tokenRequestId, msg.sender, _depositToken, _depositAmount, _requestAmount, _reference);
 
         return tokenRequestId;
     }
