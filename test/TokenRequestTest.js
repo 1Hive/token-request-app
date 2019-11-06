@@ -99,13 +99,6 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
       await assertRevert(tokenRequest.initialize(rootAccount, vault.address, []), 'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT')
     })
 
-    it('reverts when passed non-contract address as vault', async () => {
-      await assertRevert(
-        tokenRequest.initialize(tokenManager.address, rootAccount, []),
-        'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT'
-      )
-    })
-
     it('reverts when passed non-contract address in accepted deposit tokens', async () => {
       await assertRevert(
         tokenRequest.initialize(tokenManager.address, vault.address, [ETH_ADDRESS, rootAccount]),
@@ -174,13 +167,6 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         const actualVault = await tokenRequest.vault()
         assert.strictEqual(actualVault, expectedVaultAddress)
-      })
-
-      it('reverts when setting non-contract address', async () => {
-        await assertRevert(
-          tokenRequest.setVault(rootAccount, { from: accounts[1] }),
-          'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT'
-        )
       })
     })
 

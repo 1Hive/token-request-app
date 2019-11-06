@@ -70,7 +70,6 @@ contract TokenRequest is AragonApp {
 
     function initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens) external onlyInit {
         require(isContract(_tokenManager), ERROR_ADDRESS_NOT_CONTRACT);
-        require(isContract(_vault), ERROR_ADDRESS_NOT_CONTRACT);
         require(_acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
 
         for (uint256 i = 0; i < _acceptedDepositTokens.length; i++) {
@@ -103,8 +102,6 @@ contract TokenRequest is AragonApp {
     * @param _vault The new vault address
     */
     function setVault(address _vault) external auth(SET_VAULT_ROLE) {
-        require(isContract(_vault), ERROR_ADDRESS_NOT_CONTRACT);
-
         vault = _vault;
         emit SetVault(_vault);
     }
