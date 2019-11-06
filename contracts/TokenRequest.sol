@@ -166,7 +166,7 @@ contract TokenRequest is AragonApp {
     * @notice Refund the deposit for token request with id `_tokenRequestId` to the creators account.
     * @param _tokenRequestId ID of the Token Request
     */
-    function refundTokenRequest(uint256 _tokenRequestId) external {
+    function refundTokenRequest(uint256 _tokenRequestId) external nonReentrant {
         TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
         require(tokenRequestCopy.requesterAddress == msg.sender, ERROR_TOKEN_REQUEST_NOT_OWNER);
 
@@ -196,7 +196,7 @@ contract TokenRequest is AragonApp {
     *      This function requires the MINT_ROLE permission on the TokenManager specified.
     * @param _tokenRequestId ID of the Token Request
     */
-    function finaliseTokenRequest(uint256 _tokenRequestId) external auth(FINALISE_TOKEN_REQUEST_ROLE) {
+    function finaliseTokenRequest(uint256 _tokenRequestId) external nonReentrant auth(FINALISE_TOKEN_REQUEST_ROLE) {
         TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
         require(tokenRequestCopy.requesterAddress != address(0), ERROR_REQUEST_NO_REQUEST);
 

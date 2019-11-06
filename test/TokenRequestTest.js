@@ -419,6 +419,20 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_NO_REQUEST')
       })
+
+      it('it should revert if ETH transfer fails', async () => {
+        const expectedUserMiniMeBalance = 50
+        const expectedVaultBalance = 1
+        await acl.createPermission(accounts[1], tokenRequest.address, SET_VAULT_ROLE, rootAccount)
+        await tokenRequest.setVault(mockErc20.address, { from: accounts[1] })
+
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, REFERENCE, {
+          from: rootAccount,
+          value: expectedVaultBalance,
+        })
+
+        await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_ETH_TRANSFER_FAILED')
+      })
     })
 
     describe('refundTokenRequest(uint256 _tokenRequestId) ', () => {
@@ -516,6 +530,19 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         await assertRevert(tokenRequest.refundTokenRequest(0, { from: refundEthAccount }), 'TOKEN_REQUEST_NOT_OWNER')
       })
+
+      // it('it should revert if ETH transfer fails', async () => {
+      //   const weiValue = 1000000000000000
+      //   await tokenRequest.createTokenRequest(ETH_ADDRESS, weiValue, 1, REFERENCE, {
+      //     value: weiValue,
+      //     from: mockErc20.address,
+      //   })
+
+      //   await assertRevert(
+      //     tokenRequest.refundTokenRequest(0, { from: mockErc20.address }),
+      //     'TOKEN_REQUEST_ETH_TRANSFER_FAILED'
+      //   )
+      // })
     })
   })
 })
