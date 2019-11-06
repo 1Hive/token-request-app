@@ -31,6 +31,7 @@ contract TokenRequest is AragonApp {
     string private constant ERROR_ADDRESS_NOT_CONTRACT = "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT";
     string private constant ERROR_TOKEN_REQUEST_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
+    string private constant ERROR_ETH_TRANSFER_FAILED = "TOKEN_REQUEST_ETH_TRANSFER_FAILED";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
     string private constant ERROR_REQUEST_NO_REQUEST = "TOKEN_REQUEST_NO_REQUEST";
 
@@ -165,7 +166,7 @@ contract TokenRequest is AragonApp {
     * @notice Refund the deposit for token request with id `_tokenRequestId` to the creators account.
     * @param _tokenRequestId ID of the Token Request
     */
-    function refundTokenRequest(uint256 _tokenRequestId) external {
+    function refundTokenRequest(uint256 _tokenRequestId) external nonReentrant {
         TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
         require(tokenRequestCopy.requesterAddress == msg.sender, ERROR_TOKEN_REQUEST_NOT_OWNER);
 
@@ -178,7 +179,8 @@ contract TokenRequest is AragonApp {
 
         if (refundAmount > 0) {
             if (refundToken == ETH) {
-                refundToAddress.transfer(refundAmount);
+                (bool success, ) = refundToAddress.call.value(refundAmount)();
+                require(success, ERROR_ETH_TRANSFER_FAILED);
             } else {
                 require(ERC20(refundToken).safeTransfer(refundToAddress, refundAmount), ERROR_TOKEN_TRANSFER_REVERTED);
             }
@@ -194,7 +196,7 @@ contract TokenRequest is AragonApp {
     *      This function requires the MINT_ROLE permission on the TokenManager specified.
     * @param _tokenRequestId ID of the Token Request
     */
-    function finaliseTokenRequest(uint256 _tokenRequestId) external auth(FINALISE_TOKEN_REQUEST_ROLE) {
+    function finaliseTokenRequest(uint256 _tokenRequestId) external nonReentrant auth(FINALISE_TOKEN_REQUEST_ROLE) {
         TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
         require(tokenRequestCopy.requesterAddress != address(0), ERROR_REQUEST_NO_REQUEST);
 
@@ -208,7 +210,8 @@ contract TokenRequest is AragonApp {
 
         if (depositAmount > 0) {
             if (depositToken == ETH) {
-                vault.transfer(depositAmount);
+                (bool success, ) = vault.call.value(depositAmount)();
+                require(success, ERROR_ETH_TRANSFER_FAILED);
             } else {
                 require(ERC20(depositToken).safeTransfer(vault, depositAmount), ERROR_TOKEN_TRANSFER_REVERTED);
             }
