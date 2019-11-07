@@ -99,13 +99,6 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
       await assertRevert(tokenRequest.initialize(rootAccount, vault.address, []), 'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT')
     })
 
-    it('reverts when passed non-contract address as vault', async () => {
-      await assertRevert(
-        tokenRequest.initialize(tokenManager.address, rootAccount, []),
-        'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT'
-      )
-    })
-
     it('reverts when passed non-contract address in accepted deposit tokens', async () => {
       await assertRevert(
         tokenRequest.initialize(tokenManager.address, vault.address, [ETH_ADDRESS, rootAccount]),
@@ -174,13 +167,6 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         const actualVault = await tokenRequest.vault()
         assert.strictEqual(actualVault, expectedVaultAddress)
-      })
-
-      it('reverts when setting non-contract address', async () => {
-        await assertRevert(
-          tokenRequest.setVault(rootAccount, { from: accounts[1] }),
-          'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT'
-        )
       })
     })
 
@@ -314,7 +300,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
     })
 
     describe('finaliseTokenRequest(uint256 _tokenRequestId)', () => {
-      let script, forwarderMock, forwarderMockBase
+      let script, failureScript, forwarderMock, forwarderMockBase
       beforeEach(async () => {
         forwarderMockBase = await ForwarderMock.new()
         const newForwarderMockReceipt = await dao.newAppInstance('0x9876', forwarderMockBase.address, '0x', false, {
@@ -336,7 +322,12 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
           to: tokenRequest.address,
           calldata: tokenRequest.contract.methods.finaliseTokenRequest(0).encodeABI(),
         }
+        const failureAction = {
+          to: tokenRequest.address,
+          calldata: tokenRequest.contract.methods.finaliseTokenRequest(1).encodeABI(),
+        }
         script = encodeCallScript([action])
+        failureScript = encodeCallScript([failureAction])
       })
 
       it('finalise token request (ERC20)', async () => {
@@ -417,7 +408,19 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         await forwarderMock.forward(script, { from: rootAccount })
 
-        await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_NO_REQUEST')
+        await assertRevert(forwarderMock.forward(script, { from: rootAccount }), 'TOKEN_REQUEST_NOT_PENDING')
+      })
+
+      it('it should not finalise a request that does not exist', async () => {
+        const expectedUserMiniMeBalance = 300
+        const expectedVaultBalance = 200
+
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, expectedVaultBalance, expectedUserMiniMeBalance, REFERENCE, {
+          from: rootAccount,
+          value: expectedVaultBalance,
+        })
+
+        await assertRevert(forwarderMock.forward(failureScript, { from: rootAccount }), 'TOKEN_REQUEST_NO_REQUEST')
       })
 
       it('it should revert if ETH transfer fails', async () => {
@@ -528,7 +531,17 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
         await tokenRequest.refundTokenRequest(0, { from: refundEthAccount })
 
-        await assertRevert(tokenRequest.refundTokenRequest(0, { from: refundEthAccount }), 'TOKEN_REQUEST_NOT_OWNER')
+        await assertRevert(tokenRequest.refundTokenRequest(0, { from: refundEthAccount }), 'TOKEN_REQUEST_NOT_PENDING')
+      })
+
+      it('should not refund a request that does not exist', async () => {
+        const weiValue = 1000000000000000
+        await tokenRequest.createTokenRequest(ETH_ADDRESS, weiValue, 1, REFERENCE, {
+          value: weiValue,
+          from: refundEthAccount,
+        })
+
+        await assertRevert(tokenRequest.refundTokenRequest(1, { from: refundEthAccount }), 'TOKEN_REQUEST_NO_REQUEST')
       })
     })
   })

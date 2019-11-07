@@ -25,24 +25,26 @@ contract TokenRequest is AragonApp {
     bytes32 constant public MODIFY_TOKENS_ROLE = keccak256("MODIFY_TOKENS_ROLE");
 
     string private constant ERROR_TOO_MANY_ACCEPTED_TOKENS = "TOKEN_REQUEST_TOO_MANY_ACCEPTED_TOKENS";
-    string private constant ERROR_TOO_MANY_TOKEN_REQUESTS = "TOKEN_REQUEST_TOO_MANY_TOKEN_REQUESTS";
     string private constant ERROR_TOKEN_ALREADY_ACCEPTED = "TOKEN_REQUEST_TOKEN_ALREADY_ACCEPTED";
     string private constant ERROR_TOKEN_NOT_ACCEPTED = "TOKEN_REQUEST_TOKEN_NOT_ACCEPTED";
     string private constant ERROR_ADDRESS_NOT_CONTRACT = "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT";
-    string private constant ERROR_TOKEN_REQUEST_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
+    string private constant ERROR_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
+    string private constant ERROR_NOT_PENDING = "TOKEN_REQUEST_NOT_PENDING";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
     string private constant ERROR_ETH_TRANSFER_FAILED = "TOKEN_REQUEST_ETH_TRANSFER_FAILED";
     string private constant ERROR_TOKEN_TRANSFER_REVERTED = "TOKEN_REQUEST_TOKEN_TRANSFER_REVERTED";
-    string private constant ERROR_REQUEST_NO_REQUEST = "TOKEN_REQUEST_NO_REQUEST";
+    string private constant ERROR_NO_REQUEST = "TOKEN_REQUEST_NO_REQUEST";
 
     uint256 public constant MAX_ACCEPTED_DEPOSIT_TOKENS = 100;
-    uint256 public constant MAX_ADDRESS_TOKEN_REQUEST_IDS = 100;
+
+    enum Status { Pending, Refunded, Finalised }
 
     struct TokenRequest {
         address requesterAddress;
         address depositToken;
         uint256 depositAmount;
         uint256 requestAmount;
+        Status status;
     }
 
     TokenManager public tokenManager;
@@ -52,7 +54,6 @@ contract TokenRequest is AragonApp {
 
     uint256 public nextTokenRequestId;
     mapping(uint256 => TokenRequest) public tokenRequests; // ID => TokenRequest
-    mapping(address => uint256[]) public addressesTokenRequestIds; // Sender address => List of ID's
 
     event SetTokenManager(address tokenManager);
     event SetVault(address vault);
@@ -62,9 +63,13 @@ contract TokenRequest is AragonApp {
     event TokenRequestRefunded(uint256 requestId, address refundToAddress, address refundToken, uint256 refundAmount);
     event TokenRequestFinalised(uint256 requestId, address requester, address depositToken, uint256 depositAmount, uint256 requestAmount);
 
+    modifier tokenRequestExists(uint256 _tokenRequestId) {
+        require(_tokenRequestId < nextTokenRequestId, ERROR_NO_REQUEST);
+        _;
+    }
+
     function initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens) external onlyInit {
         require(isContract(_tokenManager), ERROR_ADDRESS_NOT_CONTRACT);
-        require(isContract(_vault), ERROR_ADDRESS_NOT_CONTRACT);
         require(_acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
 
         for (uint256 i = 0; i < _acceptedDepositTokens.length; i++) {
@@ -97,8 +102,6 @@ contract TokenRequest is AragonApp {
     * @param _vault The new vault address
     */
     function setVault(address _vault) external auth(SET_VAULT_ROLE) {
-        require(isContract(_vault), ERROR_ADDRESS_NOT_CONTRACT);
-
         vault = _vault;
         emit SetVault(_vault);
     }
@@ -143,7 +146,6 @@ contract TokenRequest is AragonApp {
     returns (uint256)
     {
         require(acceptedDepositTokens.contains(_depositToken), ERROR_TOKEN_NOT_ACCEPTED);
-        require(addressesTokenRequestIds[msg.sender].length < MAX_ADDRESS_TOKEN_REQUEST_IDS, ERROR_TOO_MANY_TOKEN_REQUESTS);
 
         if (_depositToken == ETH) {
             require(msg.value == _depositAmount, ERROR_ETH_VALUE_MISMATCH);
@@ -154,8 +156,7 @@ contract TokenRequest is AragonApp {
         uint256 tokenRequestId = nextTokenRequestId;
         nextTokenRequestId++;
 
-        tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount);
-        addressesTokenRequestIds[msg.sender].push(tokenRequestId);
+        tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount, Status.Pending);
 
         emit TokenRequestCreated(tokenRequestId, msg.sender, _depositToken, _depositAmount, _requestAmount, _reference);
 
@@ -166,16 +167,16 @@ contract TokenRequest is AragonApp {
     * @notice Refund the deposit for token request with id `_tokenRequestId` to the creators account.
     * @param _tokenRequestId ID of the Token Request
     */
-    function refundTokenRequest(uint256 _tokenRequestId) external nonReentrant {
-        TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
-        require(tokenRequestCopy.requesterAddress == msg.sender, ERROR_TOKEN_REQUEST_NOT_OWNER);
+    function refundTokenRequest(uint256 _tokenRequestId) external nonReentrant tokenRequestExists(_tokenRequestId) {
+        TokenRequest storage tokenRequest = tokenRequests[_tokenRequestId];
+        require(tokenRequest.requesterAddress == msg.sender, ERROR_NOT_OWNER);
+        require(tokenRequest.status == Status.Pending, ERROR_NOT_PENDING);
 
-        delete tokenRequests[_tokenRequestId];
-        addressesTokenRequestIds[msg.sender].deleteItem(_tokenRequestId);
+        tokenRequest.status = Status.Refunded;
 
-        address refundToAddress = tokenRequestCopy.requesterAddress;
-        address refundToken = tokenRequestCopy.depositToken;
-        uint256 refundAmount = tokenRequestCopy.depositAmount;
+        address refundToAddress = tokenRequest.requesterAddress;
+        address refundToken = tokenRequest.depositToken;
+        uint256 refundAmount = tokenRequest.depositAmount;
 
         if (refundAmount > 0) {
             if (refundToken == ETH) {
@@ -196,17 +197,21 @@ contract TokenRequest is AragonApp {
     *      This function requires the MINT_ROLE permission on the TokenManager specified.
     * @param _tokenRequestId ID of the Token Request
     */
-    function finaliseTokenRequest(uint256 _tokenRequestId) external nonReentrant auth(FINALISE_TOKEN_REQUEST_ROLE) {
-        TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
-        require(tokenRequestCopy.requesterAddress != address(0), ERROR_REQUEST_NO_REQUEST);
+    function finaliseTokenRequest(uint256 _tokenRequestId)
+        external
+        nonReentrant
+        tokenRequestExists(_tokenRequestId)
+        auth(FINALISE_TOKEN_REQUEST_ROLE)
+    {
+        TokenRequest storage tokenRequest = tokenRequests[_tokenRequestId];
+        require(tokenRequest.status == Status.Pending, ERROR_NOT_PENDING);
 
-        delete tokenRequests[_tokenRequestId];
-        addressesTokenRequestIds[requesterAddress].deleteItem(_tokenRequestId);
+        tokenRequest.status = Status.Finalised;
 
-        address requesterAddress = tokenRequestCopy.requesterAddress;
-        address depositToken = tokenRequestCopy.depositToken;
-        uint256 depositAmount = tokenRequestCopy.depositAmount;
-        uint256 requestAmount = tokenRequestCopy.requestAmount;
+        address requesterAddress = tokenRequest.requesterAddress;
+        address depositToken = tokenRequest.depositToken;
+        uint256 depositAmount = tokenRequest.depositAmount;
+        uint256 requestAmount = tokenRequest.requestAmount;
 
         if (depositAmount > 0) {
             if (depositToken == ETH) {
