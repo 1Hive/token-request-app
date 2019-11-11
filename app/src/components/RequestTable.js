@@ -34,7 +34,7 @@ const RequestTable = React.memo(({ requests, token, onSubmit, onWithdraw, ownReq
     },
     [onWithdraw]
   )
-  const fields = ['Request Date', 'Deposited', 'Requested', 'Status', 'Actions']
+  const fields = ['Request Date', 'Deposited', 'Requested', 'Status']
   !ownRequests && fields.splice(1, 0, 'Requester')
 
   const getEntries = useMemo(() => {
@@ -73,6 +73,30 @@ const RequestTable = React.memo(({ requests, token, onSubmit, onWithdraw, ownReq
       <Text>{`${formatTokenAmountSymbol(depositSymbol, depositAmount, depositDecimals)} `}</Text>,
       <Text>{`${formatTokenAmountSymbol(requestedSymbol, requestedAmount, requestedDecimals)} `}</Text>,
       <Status color={getStatusColor(status, theme).toString()}>{`${status}`}</Status>,
+    ]
+    return !ownRequests
+      ? [
+          timeColumn,
+          <div
+            css={`
+              display: flex;
+              align-items: flex-start;
+            `}
+          >
+            <LocalIdentityBadge
+              connectedAccount={addressesEqual(requesterAddress, connectedAccount)}
+              entity={requesterAddress}
+            />
+          </div>,
+          ...commonColumns,
+        ]
+      : [timeColumn, ...commonColumns]
+  }
+
+  const getActions = request => {
+    const requestId = request[0]
+    const status = request[9]
+    return (
       <ContextMenu>
         <ContextMenuItem onClick={() => handleSelectRequest(requestId)}>
           <IconWrapper theme={theme}>
@@ -96,25 +120,8 @@ const RequestTable = React.memo(({ requests, token, onSubmit, onWithdraw, ownReq
             <div css='margin-left: 15px'>Withdraw</div>
           </ContextMenuItem>
         )}
-      </ContextMenu>,
-    ]
-    return !ownRequests
-      ? [
-          timeColumn,
-          <div
-            css={`
-              display: flex;
-              align-items: flex-start;
-            `}
-          >
-            <LocalIdentityBadge
-              connectedAccount={addressesEqual(requesterAddress, connectedAccount)}
-              entity={requesterAddress}
-            />
-          </div>,
-          ...commonColumns,
-        ]
-      : [timeColumn, ...commonColumns]
+      </ContextMenu>
+    )
   }
 
   return (
@@ -124,6 +131,7 @@ const RequestTable = React.memo(({ requests, token, onSubmit, onWithdraw, ownReq
           fields={fields}
           entries={getEntries}
           renderEntry={request => getRow(...request)}
+          renderEntryActions={request => getActions(request)}
           mode='adaptive'
           entriesPerPage={PAGINATION}
         />
