@@ -9,7 +9,7 @@
 
 The Token Request app is still in development, a first implementation was published to `token-request.open.aragonpm.eth`. If you are interested in contributing please see our open [issues](https://github.com/1hive/token-request-app/issues).
 
-#### 🚨 Security review status: pre-audit
+#### 🚨 Security review status: Contracts frozen for audit as of commit [4d0befbba9fef8b2dc8201d41a330cfe5c0deb46](https://github.com/1Hive/token-request-app/tree/4d0befbba9fef8b2dc8201d41a330cfe5c0deb46/contracts)
 
 The code in this repo has not been audited.
 
