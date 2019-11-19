@@ -19,7 +19,7 @@ From a user's perspective there are three actions to take:
 Creating a token request is the first action for a user to take. This allows someone outside of the DAO to offer a deposit to receive some of the DAO's native tokens. Click on the blue "New Request" button in the top right of the app window. The "Requested Amount" section is the amount of the DAO's tokens that you want. The "Offered Amount" is the amount of tokens that you want to offer in exchange. If the DAO supports multiple tokens, you will be able to offer any of the available tokens. If you've configured the parameters correctly the "Create request" button should light up and be blue. Clicking on it will allow you to create a transaction for a new Token Request.
 
 <p align="center">
-    <img src="" width="600" />
+    <img src="https://raw.githubusercontent.com/1Hive/token-request-app/master/docs/resources/create-request.gif" width="600" />
 </p>
 
 ### Submitting a Token Request
@@ -27,7 +27,7 @@ Creating a token request is the first action for a user to take. This allows som
 Once your Token Request is created you will see it in the main window of the app. The status should say `PENDING`. If you click on the "Actions" button you'll be able to" Submit" or "Withdraw" the Token Request. Your Token Request is not completed until you submit it. To submit your Token Request click "Submit" and then click the "Create transaction" button that appears in the signing side panel. This will create a transaction to submit the Token Request for the DAO's members to vote on.
 
 <p align="center">
-    <img src="" width="600" />
+    <img src="https://raw.githubusercontent.com/1Hive/token-request-app/master/docs/resources/submit-request.gif" width="600" />
 </p>
 
 ### Withdrawing a Token Request
@@ -35,7 +35,5 @@ Once your Token Request is created you will see it in the main window of the app
 You can withdraw a Token Request at any time. This is done by clicking on the "Actoins" button in the main window, then selecting "Withdraw." You can do this for any Token Requests that you have created whether they were just created, submitted, and/or rejected. Once you click "Withdraw" you will be prompted to create a transaction. This will withdraw the Token Request and refund your deposit. Once a token is withdrawn the app's main window will show `WITHDRAWN` as the status of the Token Request.
 
 <p align="center">
-    <img src="" width="600" />
+    <img src="https://raw.githubusercontent.com/1Hive/token-request-app/master/docs/resources/withdraw-request.gif" width="600" />
 </p>
-
-<br />
