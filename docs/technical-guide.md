@@ -2,7 +2,7 @@
 
 ## Overview
 
-1Hive's Token Request app allows users to create a vote which requests an Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to approve, if the vote is rejected the user would be able to withdraw the request and recieve their payment back and if it is approved, the payment would be deposited in the organization's vault and Organization's tokens minted.
+1Hive's Token Request app allows users to create requests for Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to approve, if the vote is rejected the user would be able to withdraw the request and recieve their payment back and if it is approved, the payment would be deposited in the organization's vault and Organization's tokens minted.
 
 When a user makes a request they should transfer the payment to the Token Request app which will hold them in escrow while the vote is created and executed. If the vote duration passes and the payment is still in the Token Request app, the user should be able to claim **their** tokens. If the vote passes then executing the vote should transfer the user's payment from the token request app to the organization's vault, and mint tokens from the tokens app for the user.
 

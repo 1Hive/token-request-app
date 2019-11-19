@@ -2,20 +2,21 @@
 
 ## What is the Token Request app?
 
-1Hive's Token Request app allows users to create a vote which requests an Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to to approve, if the vote is rejected the user would receive their payment back and if it is approved the payment would be deposited in the organization's vault.
+1Hive's Token Request app allows users to create requests for Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to approve, if the vote is rejected, the user would receive their payment back and if it is approved the payment would be deposited in the organization's vault.
 
 <br />
 
 ## Using the Token Request app
 
 From a user's perspective there are three actions to take:
+
 - create a token request
 - submit a token request
 - withdraw a token request
 
 ### Creating a Token Request
 
-Creating a token request is the first action for a user to take. This allows someone outside of the DAO to offer a deposit to receive some of the DAO's native tokens. Click on the blue "New Request" button in the top right of the app window. The "Requested Amount" section is the amount of the DAO's tokens that you want. The "Offered Amount" is the amount of tokens that you want to offer in exchange. If the DAO supports multiple tokens, you will be able to offer or request any of the available tokens. If you've configured the parameters correctly the "Create request" button should light up and be blue. Clicking on it will allow you to create a transaction for a new Token Request.
+Creating a token request is the first action for a user to take. This allows someone outside of the DAO to offer a deposit to receive some of the DAO's native tokens. Click on the blue "New Request" button in the top right of the app window. The "Requested Amount" section is the amount of the DAO's tokens that you want. The "Offered Amount" is the amount of tokens that you want to offer in exchange. If the DAO supports multiple tokens, you will be able to offer any of the available tokens. If you've configured the parameters correctly the "Create request" button should light up and be blue. Clicking on it will allow you to create a transaction for a new Token Request.
 
 <p align="center">
     <img src="" width="600" />
