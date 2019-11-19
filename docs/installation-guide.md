@@ -50,6 +50,9 @@ Token Request has been published to the APM on Rinkeby at `token-request.open.ar
 aragon dao install $dao token-request.open.aragonpm.eth --app-init-args $tokens $vault ["'0x0000000000000000000000000000000000000000'"] --environment aragon:rinkeby
 ```
 
+If the installation was executed successfully, you should see in you terminal:
+`✔ Installed token-request.open.aragonpm.eth at: <token-request-address>`
+
 > Note: In this example we are setting Ether as the only accepted deposit asset. If you would like to add another ERC20 Token as offered asset, you can add it to the address list or replace the ether address in case you want to support only one accepted asset.
 
 The default setup of the democracy DAO is for a vote of the token holders to take place before actions are executed. Head over to the voting app and you will see a new vote.
@@ -58,13 +61,17 @@ The default setup of the democracy DAO is for a vote of the token holders to tak
 
 ### 3. Set up Permissions
 
-Before the Token Request displays in the UI you must set a permission on it. First, get the address of the Token Request
+Before the Token Request displays in the UI you must set a permission on it.
+
+> In the unlikely case the proxy address of the app did not show in the previous step, then do the following:
 
 ```sh
 dao apps $dao --all --environment aragon:rinkeby
 ```
 
-Next, copy the proxy address of the permissionless app and create another environment variable `tokenRequest=0x4dA76c5B30b5a289Cb8f673Ba71A1A20bd37a00c`
+> This will list all apps installed in the dao.
+
+Copy the proxy address of the Token Request app and create another environment variable `tokenRequest=<token-request-address>`
 
 Four permissions need to be created for the Token Request to function properly
 
@@ -98,6 +105,8 @@ This grants the voting app the permission to set the vault app address and sets 
 ```sh
 dao acl create $dao $tokenRequest SET_VAULT_ROLE $voting $voting --environment aragon:rinkeby
 ```
+
+### Granting the Token Request app permissions on other apps
 
 The Token Request must also have the `MINT_ROLE` permission on `Tokens` so that it can mint organization tokens to users in the event that a request has been approved.
 

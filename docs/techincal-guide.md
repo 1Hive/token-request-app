@@ -2,20 +2,20 @@
 
 ## Overview
 
-1Hive's Token Request app allows users to create a vote which requests an Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to to approve, if the vote is rejected the user would receive their payment back and if it is approved the payment would be deposited in the organization's vault.
+1Hive's Token Request app allows users to create a vote which requests an Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to approve, if the vote is rejected the user would be able to withdraw the request and recieve their payment back and if it is approved, the payment would be deposited in the organization's vault and Organization's tokens minted.
 
-The Token Request App should be granted the `Create Votes` permission on an instance of the Aragon `Voting` app. When a user makes a request they should transfer the payment to the token request app which will hold them in escrow while the vote is created and executed. If the vote duration passes and the payment is still in the token request app, the user should be able to claim **their** tokens. If the vote passes then executing the vote should transfer the users tokens from the token request app to the organizations vault, and mint tokens from the token manager for the user.
+When a user makes a request they should transfer the payment to the Token Request app which will hold them in escrow while the vote is created and executed. If the vote duration passes and the payment is still in the Token Request app, the user should be able to claim **their** tokens. If the vote passes then executing the vote should transfer the user's payment from the token request app to the organization's vault, and mint tokens from the tokens app for the user.
 
 <br />
 
 ## Hard Coded Global Parameters
 
-We have these hard maximums to prevent griefing attacks. Since we iterate over arrays, there is risk that if these arrays reach a size that is too big to iterate over within the gas limit, however unlikely, the contract will become locked.
+We have this hard maximum to prevent OOG issues. Since we iterate over an array, there is risk that if it reachs a size that is too big to iterate over within the gas limit, however unlikely, the contract could become locked.
+
 - `MAX_ACCEPTED_DEPOSIT_TOKENS` is the maximum amount of tokens that can be added to the `_acceptedDepositTokens` array. This array defines which tokens are and are not accepted for token deposits by the DAO.
-- `MAX_ADDRESS_TOKEN_REQUEST_IDS` is the maximum amount of tokenRequestIds that a user's account can have open at a given time. This essentially means that it is the maximum number of token requests a user can have open at a given time.
+
 ```
 uint256 public constant MAX_ACCEPTED_DEPOSIT_TOKENS = 100;
-uint256 public constant MAX_ADDRESS_TOKEN_REQUEST_IDS = 100;
 ```
 
 <br />
@@ -23,12 +23,16 @@ uint256 public constant MAX_ADDRESS_TOKEN_REQUEST_IDS = 100;
 ## Token Request Struct
 
 This is the format of token requests.
+
 ```
+enum Status { Pending, Refunded, Finalised }
+
 struct TokenRequest {
-		address requesterAddress;
-		address depositToken;
-		uint256 depositAmount;
-		uint256 requestAmount;
+	address requesterAddress;
+	address depositToken;
+	uint256 depositAmount;
+	uint256 requestAmount;
+	Status status;
 }
 ```
 
@@ -37,12 +41,14 @@ struct TokenRequest {
 ## User Defined Global Variables
 
 These variables are available in the global scope of the contract, but can be changed via the contract's functions.
+
 - `tokenManager` is an Aragon [Token Manager](https://wiki.aragon.org/dev/apps/token-manager/)
 - `vault` is an Aragon [Vault](https://wiki.aragon.org/dev/apps/vault/)
 - `acceptedDepositTokens` is a dynamically sized array that holds the addresses of token contracts
-- `nextTokenRequestId` is TBD
-- `tokenRequests` is a mapping between a `uint256` and a `TokenRequest` struct
-- `addressesTokenRequestIds` is a mapping of a user's address to a dynamically sized array of `uint256`. Each `uint256` is mapped to a TokenRequest. This enables us to change the TokenRequest struct structure when the contract is upgraded without overwriting data.
+- `nextTokenRequestId` is the id that the next token request created will have.
+- `tokenRequests` is a mapping between a `uint256` and a `TokenRequest` struct. This holds all requests ever created.
+- `addressesTokenRequestIds` is a mapping of a user's address to a dynamically sized array of `uint256` where each `uint256` is mapped to a TokenRequest in `tokenRequests`.
+
 ```
 TokenManager public tokenManager;
 address public vault;
@@ -58,11 +64,21 @@ mapping(address => uint256[]) public addressesTokenRequestIds; // Sender address
 
 ## Initialization
 
-The token request app is initialized by passing the address of a `token manager` instance, the address of a `_vault` instance, and an array of addresses `_acceptedDepositTokens`. The `_acceptedDepositTokens` array must be less than the `MAX_ACCEPTED_DEPOSIT_TOKENS` variable which is set to 100.
+The token request app is initialized by passing the address of a `_tokenManager` instance, the address of a `_vault` instance, and an array of addresses `_acceptedDepositTokens`. The `_acceptedDepositTokens` array must be less than the `MAX_ACCEPTED_DEPOSIT_TOKENS` variable which is set to 100.
+
 ```
 function initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens) external onlyInit {
-		// requite that the amount of token contract addresses in `_acceptedDepositTokens` is less than `MAX_ACCEPTED_DEPOSIT_TOKENS`
+		require(isContract(_tokenManager), ERROR_ADDRESS_NOT_CONTRACT);
+		// require that the amount of token contract addresses in `_acceptedDepositTokens` is less than `MAX_ACCEPTED_DEPOSIT_TOKENS`
 		require(_acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
+
+		// check that the all addresses in the list of accepted deposited tokens are contracts
+		for (uint256 i = 0; i < _acceptedDepositTokens.length; i++) {
+				address acceptedDepositToken = _acceptedDepositTokens[i];
+				if (acceptedDepositToken != ETH) {
+						require(isContract(acceptedDepositToken), ERROR_ADDRESS_NOT_CONTRACT);
+				}
+		}
 
 		// initialize parameters
 		tokenManager = TokenManager(_tokenManager);
@@ -79,6 +95,7 @@ function initialize(address _tokenManager, address _vault, address[] _acceptedDe
 ## Setters
 
 The initialization parameters can be changed with the following functions:
+
 ```
 /**
 * @notice Set the Token Manager to `_tokenManager`.
@@ -103,11 +120,14 @@ function setVault(address _vault) external auth(SET_VAULT_ROLE) {
 * @param _token token address
 */
 function addToken(address _token) external auth(MODIFY_TOKENS_ROLE) {
-		require(isContract(_token), ERROR_ADDRESS_NOT_CONTRACT);
 		require(!acceptedDepositTokens.contains(_token), ERROR_TOKEN_ALREADY_ACCEPTED);
+		require(acceptedDepositTokens.length < MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
+
+		if (_token != ETH) {
+				require(isContract(_token), ERROR_ADDRESS_NOT_CONTRACT);
+		}
 
 		acceptedDepositTokens.push(_token);
-		require(acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
 
 		emit TokenAdded(_token);
 }
@@ -127,29 +147,25 @@ function removeToken(address _token) external auth(MODIFY_TOKENS_ROLE) {
 
 ## Creating a Token Request
 
-When a user creates a new token request they can choose the deposit token, the amount of that token they want to deposit, and how much of they DAO's native token they'd like to request in exchange. The deposit token must be an address in the `acceptedDepositTokens` array. The user must have less than `MAX_ADDRESS_TOKEN_REQUEST_IDS` open token requests.
+When a user creates a new token request they can choose the deposit token, the amount of tokens they want to deposit, and how much of the DAO's native token they'd like to request in exchange.
 
-> note: the user can deposit as many tokens as they want. A user can also request as many of the DAO's native token as they want. `MAX_ACCEPTED_DEPOSIT_TOKENS` is a parameter that controls the maximum amount of tokens the DAO can accept for requests, not the amount of tokens a user can deposit or request.
+> Note: The user can deposit an unlimited amount of tokens. A user can also request as many of the DAO's native token as they want. `MAX_ACCEPTED_DEPOSIT_TOKENS` is a parameter that controls the maximum amount of tokens the DAO can accept as deposit for requests, not the amount of tokens a user can deposit or request.
 
 ```
 /**
-* @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, _depositToken.decimals(): uint256)` in exchange for `@tokenAmount(self.getToken(): address, _requestAmount, true, 18)`
-* @dev Note the above radspec string seems to need to be on a single line. When split compile errors occur.
+* @notice Create a token request depositing `@tokenAmount(_depositToken, _depositAmount, true, 18)` in exchange for `@tokenAmount(self.getToken(): address, _requestAmount, true, 18)`
 * @param _depositToken Address of the token being deposited
 * @param _depositAmount Amount of the token being deposited
 * @param _requestAmount Amount of the token being requested
+* @param _reference String detailing request reason
 */
-function createTokenRequest(address _depositToken, uint256 _depositAmount, uint256 _requestAmount)
+function createTokenRequest(address _depositToken, uint256 _depositAmount, uint256 _requestAmount, string _reference)
 external
 payable
 returns (uint256)
 {
 		// require that the deposit token is accepted by the DAO
 		require(acceptedDepositTokens.contains(_depositToken), ERROR_TOKEN_NOT_ACCEPTED);
-		// require that the user has less than the maximum amount of token requests open
-		require(addressesTokenRequestIds[msg.sender].length < MAX_ADDRESS_TOKEN_REQUEST_IDS, ERROR_TOO_MANY_TOKEN_REQUESTS);
-		// require that the user is depositing a non-zero amount of tokens
-		require(_depositAmount > 0, ERROR_NO_AMOUNT);
 
 		// logic to accept ETH or an ERC-20 token
 		if (_depositToken == ETH) {
@@ -158,20 +174,14 @@ returns (uint256)
 				require(ERC20(_depositToken).safeTransferFrom(msg.sender, address(this), _depositAmount), ERROR_TOKEN_TRANSFER_REVERTED);
 		}
 
-		// if all the checks pass...
-
-		// create a new tokenRequestId
+		// create a new TokenRequest and add it to the tokenRequests array
 		uint256 tokenRequestId = nextTokenRequestId;
-		// iterate the tokenRequestId nonce
 		nextTokenRequestId++;
 
-		// encode a new TokenRequest in the tokenRequestId variable and add it to the tokenRequests array
-		tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount);
-		// add the tokenRequestId (a number that maps to the token request) to the users's address in the addressesTokenRequestIds array
-		addressesTokenRequestIds[msg.sender].push(tokenRequestId);
+		tokenRequests[tokenRequestId] = TokenRequest(msg.sender, _depositToken, _depositAmount, _requestAmount, Status.Pending);
 
 		// emit an event
-		emit TokenRequestCreated(tokenRequestId, msg.sender, _depositToken, _depositAmount, _requestAmount);
+		emit TokenRequestCreated(tokenRequestId, msg.sender, _depositToken, _depositAmount, _requestAmount, _reference);
 
 		// return the tokenRequestId
 		return tokenRequestId;
@@ -180,40 +190,35 @@ returns (uint256)
 
 <br />
 
-
 ## Refund Token Request
 
-Allows a user to request a refund for a rejected token request. The user must supply the `tokenRequestId` of the TokenRequest they wish to have refunded. The user must then be the owner of this TokenRequest.
+Allows a user to request a refund for a token request. The user must supply the `tokenRequestId` of the request they wish to have refunded. The user must be the owner of this request.
+
 ```
 /**
 * @notice Refund the deposit for token request with id `_tokenRequestId` to the creators account.
 * @param _tokenRequestId ID of the Token Request
 */
-function refundTokenRequest(uint256 _tokenRequestId) external {
-		// copy the TokenRequest to memory for use within this function
-		TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
-		// delete the TokenRequest from the  contract
-		delete tokenRequests[_tokenRequestId];
+function refundTokenRequest(uint256 _tokenRequestId) external nonReentrant tokenRequestExists(_tokenRequestId) {
+		TokenRequest storage tokenRequest = tokenRequests[_tokenRequestId];
+		require(tokenRequest.requesterAddress == msg.sender, ERROR_NOT_OWNER);
+		require(tokenRequest.status == Status.Pending, ERROR_NOT_PENDING);
 
-		// require that the user is the owner of the token request
-		require(tokenRequestCopy.requesterAddress == msg.sender, ERROR_TOKEN_REQUEST_NOT_OWNER);
+		tokenRequest.status = Status.Refunded;
 
-		// initialize parameters from the copied token request
-		address refundToAddress = tokenRequestCopy.requesterAddress;
-		address refundToken = tokenRequestCopy.depositToken;
-		uint256 refundAmount = tokenRequestCopy.depositAmount;
+		address refundToAddress = tokenRequest.requesterAddress;
+		address refundToken = tokenRequest.depositToken;
+		uint256 refundAmount = tokenRequest.depositAmount;
 
-		// logic to handle refunding ETH vs ERC-20 tokens
-		if (refundToken == ETH) {
-				refundToAddress.transfer(refundAmount);
-		} else {
-				require(ERC20(refundToken).safeTransfer(refundToAddress, refundAmount), ERROR_TOKEN_TRANSFER_REVERTED);
+		if (refundAmount > 0) {
+				if (refundToken == ETH) {
+						(bool success, ) = refundToAddress.call.value(refundAmount)();
+						require(success, ERROR_ETH_TRANSFER_FAILED);
+				} else {
+						require(ERC20(refundToken).safeTransfer(refundToAddress, refundAmount), ERROR_TOKEN_TRANSFER_REVERTED);
+				}
 		}
 
-		// delete the `tokenRequestId` from the user in the `addressesTokenRequestIds` array
-		addressesTokenRequestIds[msg.sender].deleteItem(_tokenRequestId);
-
-		// emit an event that the token request has been refunded
 		emit TokenRequestRefunded(_tokenRequestId, refundToAddress, refundToken, refundAmount);
 }
 ```
@@ -222,45 +227,47 @@ function refundTokenRequest(uint256 _tokenRequestId) external {
 
 ## Finalize Token Request
 
-To accept a token request `finalizeTokenRequest()` needs to be called by passing in the `tokenRequstId` of the token request to finalize. This deletes the TokenRequest from the contract, moves the token deposit to the DAO's vault, and transfers the requested amount of the DAO's tokens to the token requester.
+To accept a token request `finalizeTokenRequest()` needs to be called by passing in the `tokenRequestId` of the token request to finalize. This moves the token deposit to the DAO's vault, and transfers the requested amount of the DAO's tokens to the token requester.
+
 ```
 /**
 * @notice Finalise the token request with id `_tokenRequestId`, minting the requester funds and moving payment
 					to the vault.
 * @dev This function's FINALISE_TOKEN_REQUEST_ROLE permission is typically given exclusively to a forwarder.
-*      This contract also requires the MINT_ROLE on the TokenManager specified.
-*      It is recommended the forwarder is granted the FINALISE_TOKEN_REQUEST_ROLE permission to call this function
-*      before the MINT_ROLE permission on the TokenManager to prevent calling of this function before it has been
-*      restricted appropriately.
+*      This function requires the MINT_ROLE permission on the TokenManager specified.
 * @param _tokenRequestId ID of the Token Request
 */
-function finaliseTokenRequest(uint256 _tokenRequestId) external auth(FINALISE_TOKEN_REQUEST_ROLE) {
-		// copy the token request to memory for use within this function
-		TokenRequest memory tokenRequestCopy = tokenRequests[_tokenRequestId];
-		// delete the `tokenRequestId` from the `tokenRequests[]` array
-		delete tokenRequests[_tokenRequestId];
+function finaliseTokenRequest(uint256 _tokenRequestId)
+		external
+		nonReentrant
+		tokenRequestExists(_tokenRequestId)
+		auth(FINALISE_TOKEN_REQUEST_ROLE)
+{
+		TokenRequest storage tokenRequest = tokenRequests[_tokenRequestId];
+		require(tokenRequest.status == Status.Pending, ERROR_NOT_PENDING);
 
-		// require that the deposit amount of the token request is greater than 0
-		require(tokenRequestCopy.depositAmount > 0, ERROR_NO_DEPOSIT);
+		// set request as finalized
+		tokenRequest.status = Status.Finalised;
 
 		// initialize parameters from the token request
-		address requesterAddress = tokenRequestCopy.requesterAddress;
-		address depositToken = tokenRequestCopy.depositToken;
-		uint256 depositAmount = tokenRequestCopy.depositAmount;
-		uint256 requestAmount = tokenRequestCopy.requestAmount;
+		address requesterAddress = tokenRequest.requesterAddress;
+		address depositToken = tokenRequest.depositToken;
+		uint256 depositAmount = tokenRequest.depositAmount;
+		uint256 requestAmount = tokenRequest.requestAmount;
 
 		// logic to handle depositing the ETH or ERC-20 tokens into the DAO's vault
-		if (depositToken == ETH) {
-				vault.transfer(depositAmount);
-		} else {
-				require(ERC20(depositToken).safeTransfer(vault, depositAmount), ERROR_TOKEN_TRANSFER_REVERTED);
+		if (depositAmount > 0) {
+
+				if (depositToken == ETH) {
+						(bool success, ) = vault.call.value(depositAmount)();
+						require(success, ERROR_ETH_TRANSFER_FAILED);
+				} else {
+						require(ERC20(depositToken).safeTransfer(vault, depositAmount), ERROR_TOKEN_TRANSFER_REVERTED);
+				}
 		}
 
 		// mint the requested amount of the DAO's native tokens for the token requestee
 		tokenManager.mint(requesterAddress, requestAmount);
-
-		// delete the token request from the array of the token requestee's array of token requests in `addressTokenRequestIds`
-		addressesTokenRequestIds[requesterAddress].deleteItem(_tokenRequestId);
 
 		// emit an event that the token request is finalized
 		emit TokenRequestFinalised(_tokenRequestId, requesterAddress, depositToken, depositAmount, requestAmount);
@@ -272,6 +279,7 @@ function finaliseTokenRequest(uint256 _tokenRequestId) external auth(FINALISE_TO
 ## Getters
 
 These get various values from the contract.
+
 ```
 function getAcceptedDepositTokens() public view returns (address[]) {
 		return acceptedDepositTokens;
@@ -310,6 +318,7 @@ TokenRequest.sol depends on two external libraries that have been developed by 1
 ### AddressArrayLib
 
 `AddressArrayLib` allows us to extend an array of addresses with functionality to easily delete and look up items.
+
 ```
 pragma solidity ^0.4.24;
 
@@ -347,6 +356,7 @@ library AddressArrayLib {
 ### UintArrayLib
 
 `UintArrayLib` allows us to extend an array of uint256 with functionality to easily delete items.
+
 ```
 pragma solidity ^0.4.24;
 
