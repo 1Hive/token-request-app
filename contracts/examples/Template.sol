@@ -15,7 +15,7 @@ import "@aragon/os/contracts/apm/Repo.sol";
 import "@aragon/os/contracts/lib/ens/ENS.sol";
 import "@aragon/os/contracts/lib/ens/PublicResolver.sol";
 import "@aragon/os/contracts/apm/APMNamehash.sol";
-import "@aragon/apps-voting/contracts/Voting.sol";
+import "@1hive/apps-dandelion-voting/contracts/DandelionVoting.sol";
 import "@aragon/apps-vault/contracts/Vault.sol";
 import "@aragon/apps-token-manager/contracts/TokenManager.sol";
 import "@aragon/apps-shared-minime/contracts/MiniMeToken.sol";
@@ -85,14 +85,14 @@ contract Template is TemplateBase {
         acl.createPermission(this, dao, dao.APP_MANAGER_ROLE(), this);
 
         bytes32 tokenRequestAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("token-request")));
-        bytes32 votingAppId = apmNamehash("voting");
+        bytes32 votingAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dandelion-voting")));
         bytes32 tokenManagerAppId = apmNamehash("token-manager");
         bytes32 vaultAppId = apmNamehash("vault");
 
 
         Vault vault = Vault(dao.newAppInstance(vaultAppId, latestVersionAppBase(vaultAppId),new bytes(0),true));
         TokenRequest tokenRequest = TokenRequest(dao.newAppInstance(tokenRequestAppId, latestVersionAppBase(tokenRequestAppId)));
-        Voting voting = Voting(dao.newAppInstance(votingAppId, latestVersionAppBase(votingAppId)));
+        DandelionVoting voting = DandelionVoting(dao.newAppInstance(votingAppId, latestVersionAppBase(votingAppId)));
         TokenManager tokenManager = TokenManager(dao.newAppInstance(tokenManagerAppId, latestVersionAppBase(tokenManagerAppId)));
 
 
@@ -135,14 +135,14 @@ contract Template is TemplateBase {
         emit DeployDao(dao);
     }
 
-    function initApps(Vault vault, TokenManager tokenManager, TokenRequest tokenRequest, Voting voting, MiniMeToken token, MiniMeToken testToken) internal {
+    function initApps(Vault vault, TokenManager tokenManager, TokenRequest tokenRequest, DandelionVoting voting, MiniMeToken token, MiniMeToken testToken) internal {
         vault.initialize();
         tokenManager.initialize(token, true, 0);
         address[] memory tokenList = new address[](2);
         tokenList[0] = address(testToken);
         tokenList[1] = address(0);
         tokenRequest.initialize(tokenManager, vault, tokenList);
-        voting.initialize(token, 50 * PCT, 20 * PCT, 1 days);
+        voting.initialize(token, 50 * PCT, 20 * PCT, 15, 10, 5);
     }
 
     function createTokenForUser(address root, MiniMeTokenFactory tokenFactory, TokenRequest tokenRequest, MiniMeToken testToken) internal {

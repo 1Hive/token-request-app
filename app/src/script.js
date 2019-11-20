@@ -43,12 +43,13 @@ async function initialize(tokenManagerAddress) {
 
 async function createStore(tokenManagerContract, tokens, settings) {
   return app.store(
-    (state, { event, returnValues, blockNumber }) => {
+    async (state, event) => {
+      const { event: eventName, returnValues, blockNumber } = event
       let nextState = {
         ...state,
       }
-
-      switch (event) {
+      console.log('TR EVENT ', eventName)
+      switch (eventName) {
         case events.ACCOUNTS_TRIGGER:
           return updateConnectedAccount(nextState, returnValues)
         case events.SYNC_STATUS_SYNCING:
@@ -56,14 +57,23 @@ async function createStore(tokenManagerContract, tokens, settings) {
         case events.SYNC_STATUS_SYNCED:
           return { ...nextState, isSyncing: false }
         case 'TokenRequestCreated':
-          return newTokenRequest(nextState, returnValues, settings, blockNumber)
+          nextState = await newTokenRequest(nextState, returnValues, settings, blockNumber)
+          break
         case 'TokenRequestRefunded':
-          return requestRefunded(nextState, returnValues)
+          nextState = await requestRefunded(nextState, returnValues)
+          break
         case 'TokenRequestFinalised':
-          return requestFinalised(nextState, returnValues)
+          nextState = await requestFinalised(nextState, returnValues)
+          break
+        case 'ForwardedActions':
+          console.log('FORWARDED ACTIONS ', nextState.offchainActions)
+          nextState.offchainActions = await onForwardedActions(returnValues)
+
+          break
         default:
-          return state
+          break
       }
+      return nextState
     },
     {
       init: initializeState(tokenManagerContract, tokens, settings),
@@ -100,6 +110,47 @@ function initializeState(tokenManagerContract, tokens, settings) {
       console.error('Error initializing state: ', error)
     }
   }
+}
+
+const onForwardedActions = async ({ failedActionKeys = [], pendingActionKeys = [], actions }) => {
+  const offchainActions = { pendingActions: [], failedActions: [] }
+
+  const getDataFromKey = async key => {
+    const action = actions[key]
+    const data = await app.queryAppMetadata(action.currentApp, action.actionId).toPromise()
+    if (!data) return
+    let metadata = await ipfsGet(data.cid)
+    if (!metadata) return
+    return { ...action, ...metadata }
+  }
+
+  let getFailedActionData = failedActionKeys.map(getDataFromKey)
+
+  let getPendingActionData = pendingActionKeys.map(getDataFromKey)
+
+  offchainActions.failedActions = (await Promise.all(getFailedActionData))
+    .filter(action => action !== undefined)
+    .map(action => ({
+      ...action,
+      startTime: new Date(action.startDate),
+      description: action.metadata,
+      amount: String(action.balance),
+      distSet: false,
+      pending: false
+    }))
+
+  offchainActions.pendingActions = (await Promise.all(getPendingActionData))
+    .filter(action => action !== undefined)
+    .map(action => ({
+      ...action,
+      startTime: new Date(action.startDate),
+      description: action.metadata,
+      amount: String(action.balance),
+      distSet: false,
+      pending: true
+    }))
+
+  return offchainActions
 }
 
 const getAcceptedTokens = async (tokens, settings) => {
