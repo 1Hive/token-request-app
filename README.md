@@ -5,10 +5,6 @@
 
 1Hive's Token Request app allows users to create a vote which requests an Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to to approve, if the vote is rejected the user would receive their payment back and if it is approved the payment would be deposited in the organization's vault.
 
-#### 🐲 Project stage: development
-
-The Redemptions app is still in development and hasn't been published to APM. If you are interested in contributing please see our open [issues](https://github.com/1hive/token-request-app/issues).
-
 #### 🚨 Security review status: pre-audit
 
 The code in this repo has not been audited.
@@ -25,19 +21,19 @@ The token request app is initialized by passing the address of a `token manager`
 
 The token request application should implement the following roles:
 
-- Request Tokens
+- Finalise token requests
 - Change Vault Address
 - Change Token Manager Address
-- Change Voting Address
-- Change Payment Token
+- Add/remove offered tokens to/from the accepted offered token list
 
 ### Interface
 
 We do not need to provide an interface for changing parameters as this can be done by power users using the CLI.
 
-We do need to provide an interface for requesting tokens, which would allow users to specify the amount and the associated payment.
+The interface allows users to request tokens, where they would specify the amount and the associated payment.
+It also allows for withdrawing their requests at any time.
 
-We do need to provide an interface for claiming payments when the request is rejected.
+For a detailed view of the flow of the app check out our [user-guide](./docs/user-guide.md)
 
 ## How to run Token request app locally
 
@@ -72,6 +68,7 @@ npm run start:template
 Token Request app has been deployed to Rinkeby at `token-request.open.aragonpm.eth`
 
 To deploy to an Aragon DAO you can use the [Aragon CLI](https://hack.aragon.org/docs/cli-intro.html).
+
 ```
 aragon dao install <dao-address> token-request.open.aragonpm.eth --app-init-args <vault-address> <token-manager-address>
 ```
