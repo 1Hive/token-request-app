@@ -3,15 +3,15 @@
 [![CircleCI](https://circleci.com/gh/1Hive/token-request-app.svg?style=svg)](https://circleci.com/gh/1Hive/token-request-app)
 [![Coverage Status](https://coveralls.io/repos/github/1Hive/token-request-app/badge.svg?branch=master&service=github)](https://coveralls.io/github/1Hive/token-request-app?branch=master&service=github)
 
-1Hive's Token Request app allows users to create a vote which requests an Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to to approve, if the vote is rejected the user would receive their payment back and if it is approved the payment would be deposited in the organization's vault.
+1Hive's Token Request app allows users to create a vote which requests an Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to approve, if the vote is rejected the user would receive their payment back and if it is approved the payment would be deposited in the organization's vault.
 
-#### 🚨 Security review status: pre-audit
+#### 🚨 Security review status: Contracts frozen for audit as of commit [4d0befbba9fef8b2dc8201d41a330cfe5c0deb46](https://github.com/1Hive/token-request-app/tree/4d0befbba9fef8b2dc8201d41a330cfe5c0deb46/contracts)
 
 The code in this repo has not been audited.
 
 ## How does it work
 
-The Token Request App should be granted the `Create Votes` permission on an instance of the Aragon `Voting` app. When a user makes a request they should transfer the payment to the token request app which will hold them in escrow while the vote is created and executed. If the vote duration passes and the payment is still in the token request app, the user should be able to claim **their** tokens. If the vote passes then executing the vote should transfer the users tokens from the token request app to the organizations vault, and mint tokens from the token manager for the user.
+The Token Request App should be granted the `Create Votes` permission on an instance of the Aragon `Voting` app. When a user makes a request they should transfer the payment to the Token Request app which will hold them in escrow while the vote is created and executed. If the vote duration passes and the payment is still in the Token Request app, the user should be able to claim **their** tokens. If the vote passes then executing the vote should transfer the users tokens from the Token Request app to the organizations vault, and mint tokens from the token manager for the user.
 
 ### Initialization
 
@@ -19,7 +19,7 @@ The token request app is initialized by passing the address of a `token manager`
 
 ### Roles
 
-The token request application should implement the following roles:
+The Token Request application should implement the following roles:
 
 - Finalise token requests
 - Change Vault Address
@@ -28,16 +28,16 @@ The token request application should implement the following roles:
 
 ### Interface
 
-We do not need to provide an interface for changing parameters as this can be done by power users using the CLI.
+We do not need to provide an interface for changing parameters as this can be done by power users using the aragonCLI.
 
 The interface allows users to request tokens, where they would specify the amount and the associated payment.
 It also allows for withdrawing their requests at any time.
 
 For a detailed view of the flow of the app check out our [user-guide](./docs/user-guide.md)
 
-## How to run Token request app locally
+## How to run Token Request app locally
 
-First make sure that you have node, npm, and the Aragon CLI installed and working. Instructions on how to set that up can be found [here](https://hack.aragon.org/docs/cli-intro.html). You'll also need to have [Metamask](https://metamask.io) or some kind of web wallet enabled to sign transactions in the browser.
+First make sure that you have node, npm, and the aragonCLI installed and working. Instructions on how to set that up can be found [here](https://hack.aragon.org/docs/cli-intro.html). You'll also need to have [Metamask](https://metamask.io) or some kind of web wallet enabled to sign transactions in the browser.
 
 Git clone this repo.
 

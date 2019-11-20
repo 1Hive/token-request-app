@@ -28,21 +28,8 @@ const Icon = styled.img.attrs({ alt: '', width: '16', height: '16' })`
 const IconSpacer = styled.div`
   width: 26px;
 `
-
-const TokenName = styled.span`
-  max-width: 110px;
-  margin-right: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`
-
 const TokenSymbol = styled.span`
   margin-right: 10px;
-`
-
-const StyledAddressBadge = styled(Badge.Identity)`
-  flex-shrink: 0;
-  margin-left: auto;
 `
 
 export default props => (

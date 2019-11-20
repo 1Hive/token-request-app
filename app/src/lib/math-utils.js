@@ -14,7 +14,15 @@ export function formatDecimals(value, digits) {
   }
 }
 
-export function formatTokenAmount(amount, isIncoming, decimals = 0, displaySign = false, { rounding = 2 } = {}) {
+export function formatDisplayAmount(amount, decimals) {
+  const number = amount / Math.pow(10, decimals)
+  const [whole, dec] = splitDecimalNumber(number.toString())
+  if (!dec)
+    return number
+  return number.toFixed(2)
+}
+
+export function formatTokenAmount(amount, isIncoming, decimals = 0, rounding, displaySign = false) {
   return (
     (displaySign ? (isIncoming ? '+' : '-') : '') + formatDecimals(round(amount / Math.pow(10, decimals), rounding), 18)
   )
@@ -43,7 +51,7 @@ export function round(num, places = 2) {
  * @param {string} num the number
  * @returns {Array<string>} array with the [<whole>, <decimal>] parts of the number
  */
-function splitDecimalNumber(num) {
+export function splitDecimalNumber(num) {
   const [whole = '', dec = ''] = num.split('.')
   return [
     whole.replace(/^0*/, ''), // trim leading zeroes

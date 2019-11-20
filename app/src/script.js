@@ -27,7 +27,7 @@ app
   )
 
 async function initialize(tokenManagerAddress) {
-  let tokens
+  let tokens = []
   const network = await app
     .network()
     .pipe(first())
@@ -66,7 +66,7 @@ async function createStore(tokenManagerContract, tokens, settings) {
       }
     },
     {
-      init: initializeState({}, tokenManagerContract, tokens, settings),
+      init: initializeState(tokenManagerContract, tokens, settings),
     }
   )
 }
@@ -77,25 +77,24 @@ async function createStore(tokenManagerContract, tokens, settings) {
  *                     *
  ***********************/
 
-function initializeState(state, tokenManagerContract, tokens, settings) {
-  return async () => {
+function initializeState(tokenManagerContract, tokens, settings) {
+  return async cachedState => {
     try {
       const minimeAddress = await tokenManagerContract.token().toPromise()
       const token = await getTokenData(minimeAddress, settings)
       const acceptedTokens = await getAcceptedTokens(tokens, settings)
-      acceptedTokens.unshift({
-        decimals: '18',
-        name: 'Ether',
-        symbol: 'ETH',
-        address: ETHER_TOKEN_FAKE_ADDRESS,
-      })
+
+      tokens.includes(ETHER_TOKEN_FAKE_ADDRESS) &&
+        acceptedTokens.unshift({
+          ...ETHER_DATA,
+          address: ETHER_TOKEN_FAKE_ADDRESS,
+        })
       token && app.indentify(`token-request ${token.symbol}`)
       return {
-        ...state,
+        ...cachedState,
         isSyncing: true,
         token,
-        acceptedTokens: acceptedTokens,
-        requests: [],
+        acceptedTokens,
       }
     } catch (error) {
       console.error('Error initializing state: ', error)
@@ -119,12 +118,12 @@ async function updateConnectedAccount(state, { account }) {
 
 async function newTokenRequest(
   state,
-  { requestId, requesterAddress, depositToken, depositAmount, requestAmount },
+  { requestId, requesterAddress, depositToken, depositAmount, requestAmount, reference },
   settings,
   blockNumber
 ) {
   try {
-    const { requests } = state
+    const { requests = [] } = state
     const { decimals, name, symbol } =
       depositToken === ETHER_TOKEN_FAKE_ADDRESS ? ETHER_DATA : await getTokenData(depositToken, settings)
 
@@ -143,6 +142,7 @@ async function newTokenRequest(
           depositSymbol: symbol,
           depositAmount,
           requestAmount,
+          reference,
           status: requestStatus.PENDING,
           date: marshallDate(timestamp),
         },
@@ -155,7 +155,7 @@ async function newTokenRequest(
 
 async function requestRefunded(state, { requestId }) {
   const { requests } = state
-  const nextStatus = requestStatus.WITHDRAWED
+  const nextStatus = requestStatus.WITHDRAWN
   return {
     ...state,
     requests: await updateRequestStatus(requests, requestId, nextStatus),
