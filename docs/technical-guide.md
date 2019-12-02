@@ -47,7 +47,6 @@ These variables are available in the global scope of the contract, but can be ch
 - `acceptedDepositTokens` is a dynamically sized array that holds the addresses of token contracts
 - `nextTokenRequestId` is the id that the next token request created will have.
 - `tokenRequests` is a mapping between a `uint256` and a `TokenRequest` struct. This holds all requests ever created.
-- `addressesTokenRequestIds` is a mapping of a user's address to a dynamically sized array of `uint256` where each `uint256` is mapped to a TokenRequest in `tokenRequests`.
 
 ```
 TokenManager public tokenManager;
@@ -57,7 +56,6 @@ address[] public acceptedDepositTokens;
 
 uint256 public nextTokenRequestId;
 mapping(uint256 => TokenRequest) public tokenRequests; // ID => TokenRequest
-mapping(address => uint256[]) public addressesTokenRequestIds; // Sender address => List of ID's
 ```
 
 <br />
