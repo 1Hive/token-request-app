@@ -5,10 +5,6 @@
 
 1Hive's Token Request app allows users to create a vote which requests an Organization's tokens in exchange for payment. For example a user may request minting 100 organization tokens in exchange for 100 DAI. The request would require a vote to approve, if the vote is rejected the user would receive their payment back and if it is approved the payment would be deposited in the organization's vault.
 
-#### 🐲 Project stage: development
-
-The Token Request app is still in development, a first implementation was published to `token-request.open.aragonpm.eth`. If you are interested in contributing please see our open [issues](https://github.com/1hive/token-request-app/issues).
-
 #### 🚨 Security review status: Contracts frozen for audit as of commit [4d0befbba9fef8b2dc8201d41a330cfe5c0deb46](https://github.com/1Hive/token-request-app/tree/4d0befbba9fef8b2dc8201d41a330cfe5c0deb46/contracts)
 
 The code in this repo has not been audited.
@@ -19,25 +15,25 @@ The Token Request App should be granted the `Create Votes` permission on an inst
 
 ### Initialization
 
-The Token Request needs to be passed the address of a `voting` app instance, the address a `token manager` instance, the address of the payment token contract, and the address of the organization's `vault`.
+The token request app is initialized by passing the address of a `token manager` instance, the address of a `_vault` instance, and an array of addresses `_acceptedDepositTokens`. The `_acceptedDepositTokens` array must be less than the `MAX_ACCEPTED_DEPOSIT_TOKENS` variable which is set to 100.
 
 ### Roles
 
 The Token Request application should implement the following roles:
 
-- **Request Tokens**
-- **Change Vault Address**
-- **Change Token Manager Address**
-- **Change Voting Address**
-- **Change Payment Token**
+- Finalise token requests
+- Change Vault Address
+- Change Token Manager Address
+- Add/remove offered tokens to/from the accepted offered token list
 
 ### Interface
 
 We do not need to provide an interface for changing parameters as this can be done by power users using the aragonCLI.
 
-We do need to provide an interface for requesting tokens, which would allow users to specify the amount and the associated payment.
+The interface allows users to request tokens, where they would specify the amount and the associated payment.
+It also allows for withdrawing their requests at any time.
 
-We do need to provide an interface for claiming payments when the request is rejected.
+For a detailed view of the flow of the app check out our [user-guide](./docs/user-guide.md)
 
 ## How to run Token Request app locally
 
@@ -69,4 +65,22 @@ npm run start:template
 
 ## How to deploy to an organization
 
-TODO:
+Token Request app has been deployed to Rinkeby at `token-request.open.aragonpm.eth`
+
+To deploy to an Aragon DAO you can use the [Aragon CLI](https://hack.aragon.org/docs/cli-intro.html).
+
+```
+aragon dao install <dao-address> token-request.open.aragonpm.eth --app-init-args <vault-address> <token-manager-address>
+```
+
+<br />
+
+## Contributing
+
+We welcome community contributions!
+
+Please check out our [open Issues]() to get started.
+
+If you discover something that could potentially impact security, please notify us immediately. The quickest way to reach us is via the #dev channel in our [team Keybase chat](https://1hive.org/contribute/keybase). Just say hi and that you discovered a potential security vulnerability and we'll DM you to discuss details.
+
+<br />
