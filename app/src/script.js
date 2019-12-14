@@ -49,7 +49,7 @@ async function createStore(tokenManagerContract, tokens, settings) {
       let nextState = {
         ...state,
       }
-      console.log('TR EVENT ', eventName)
+
       switch (eventName) {
         case events.ACCOUNTS_TRIGGER:
           return updateConnectedAccount(nextState, returnValues)
@@ -69,23 +69,10 @@ async function createStore(tokenManagerContract, tokens, settings) {
         case 'ForwardedActions':
           const offchainActions = await onForwardedActions(returnValues)
           if (offchainActions){
-            console.log('offchainActions ', offchainActions.failedActions.length)
-            console.log(' state.failedForwardedActionLength ',  state.failedForwardedActionLength)
             if(offchainActions.failedActions.length > state.failedForwardedActionLength){
               nextState = await requestRejected(state, offchainActions.failedActions)
             }
         }
-          
-          // console.log('OFFCHAINACTIONS ', nextState.offchainActions)
-          // if(nextState.offchainActions.failedActions.length > 0){
-          //   const transformed = await app.describeScript(nextState.offchainActions.failedActions[0].script).toPromise()
-          // // const transformed2 = await app.describeScript("0xbf6eec160000000000000000000000000000000000000000000000000000000000000002").toPromise()
-          //   console.log('TRANSFORMED ', transformed)
-          //   //console.log('Transformed 2 ',  transformed2)
-          //   const transformed2 = await app.describeTransaction({data: transformed[0].data, to:transformed[0].to}).toPromise()
-
-          //   console.log('TRANSFORMED 2', transformed2)
-          // }
           break
         default:
           break
@@ -226,13 +213,10 @@ async function requestRejected(state, failedActions) {
   const { requests } = state
   const nextStatus = requestStatus.REJECTED
   const failedAction = failedActions[failedActions.length - 1]
-  console.log('REJECT FAILED ACTION ', failedAction)
   const {evmScript} = failedAction
   const scriptDescription = await app.describeScript(evmScript).toPromise()
   const voteDescription = scriptDescription[0].description
-  console.log('DESCRIPTION ', voteDescription)
   const tokenRequestId = voteDescription.substr(0, voteDescription.indexOf('-')); 
-  console.log('tokenRequestId ', Number(tokenRequestId))
 
   return {
     ...state,
@@ -280,10 +264,7 @@ async function getTokenData(tokenAddress, settings) {
 }
 
 async function updateRequestStatus(requests, requestId, nextStatus) {
-  console.log('update requests ', requests)
-  console.log('update requestId ', requestId)
   const requestIndex = requests.findIndex(request => request.requestId == requestId)
-  console.log('update requestIndex ', requestIndex)
   if (requestIndex !== -1) {
     const nextRequests = Array.from(requests)
     nextRequests[requestIndex] = {
