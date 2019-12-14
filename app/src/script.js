@@ -11,6 +11,7 @@ import {
   getTokenDecimals,
   ETHER_TOKEN_FAKE_ADDRESS,
 } from './lib/token-utils'
+import {ipfsGet} from './utils/ipfs-helpers'
 
 const app = new Aragon()
 
@@ -66,9 +67,25 @@ async function createStore(tokenManagerContract, tokens, settings) {
           nextState = await requestFinalised(nextState, returnValues)
           break
         case 'ForwardedActions':
-          console.log('FORWARDED ACTIONS ', nextState.offchainActions)
-          nextState.offchainActions = await onForwardedActions(returnValues)
+          const offchainActions = await onForwardedActions(returnValues)
+          if (offchainActions){
+            console.log('offchainActions ', offchainActions.failedActions.length)
+            console.log(' state.failedForwardedActionLength ',  state.failedForwardedActionLength)
+            if(offchainActions.failedActions.length > state.failedForwardedActionLength){
+              nextState = await requestRejected(state, offchainActions.failedActions)
+            }
+        }
+          
+          // console.log('OFFCHAINACTIONS ', nextState.offchainActions)
+          // if(nextState.offchainActions.failedActions.length > 0){
+          //   const transformed = await app.describeScript(nextState.offchainActions.failedActions[0].script).toPromise()
+          // // const transformed2 = await app.describeScript("0xbf6eec160000000000000000000000000000000000000000000000000000000000000002").toPromise()
+          //   console.log('TRANSFORMED ', transformed)
+          //   //console.log('Transformed 2 ',  transformed2)
+          //   const transformed2 = await app.describeTransaction({data: transformed[0].data, to:transformed[0].to}).toPromise()
 
+          //   console.log('TRANSFORMED 2', transformed2)
+          // }
           break
         default:
           break
@@ -105,6 +122,7 @@ function initializeState(tokenManagerContract, tokens, settings) {
         isSyncing: true,
         token,
         acceptedTokens,
+        failedForwardedActionLength: 0
       }
     } catch (error) {
       console.error('Error initializing state: ', error)
@@ -204,6 +222,25 @@ async function newTokenRequest(
   }
 }
 
+async function requestRejected(state, failedActions) {
+  const { requests } = state
+  const nextStatus = requestStatus.REJECTED
+  const failedAction = failedActions[failedActions.length - 1]
+  console.log('REJECT FAILED ACTION ', failedAction)
+  const {evmScript} = failedAction
+  const scriptDescription = await app.describeScript(evmScript).toPromise()
+  const voteDescription = scriptDescription[0].description
+  console.log('DESCRIPTION ', voteDescription)
+  const tokenRequestId = voteDescription.substr(0, voteDescription.indexOf('-')); 
+  console.log('tokenRequestId ', Number(tokenRequestId))
+
+  return {
+    ...state,
+    requests: await updateRequestStatus(requests,  Number(tokenRequestId), nextStatus),
+    failedForwardedActionLength: failedActions.length
+  }
+}
+
 async function requestRefunded(state, { requestId }) {
   const { requests } = state
   const nextStatus = requestStatus.WITHDRAWN
@@ -243,8 +280,10 @@ async function getTokenData(tokenAddress, settings) {
 }
 
 async function updateRequestStatus(requests, requestId, nextStatus) {
-  const requestIndex = requests.findIndex(request => request.requestId === requestId)
-
+  console.log('update requests ', requests)
+  console.log('update requestId ', requestId)
+  const requestIndex = requests.findIndex(request => request.requestId == requestId)
+  console.log('update requestIndex ', requestIndex)
   if (requestIndex !== -1) {
     const nextRequests = Array.from(requests)
     nextRequests[requestIndex] = {

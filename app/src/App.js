@@ -23,6 +23,7 @@ const App = () => {
     selectRequest,
     selectedRequest,
   } = useAppLogic()
+  console.log('REQUESTS ', requests)
   const [screenIndex, setScreenIndex] = useState(0)
   const handleBack = useCallback(() => selectRequest(-1), [selectRequest])
 

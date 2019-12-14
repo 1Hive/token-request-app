@@ -146,6 +146,8 @@ const getStatusColor = (status, theme) => {
       return theme.yellow
     case requestStatus.APPROVED:
       return theme.positive
+    case requestStatus.REJECTED:
+      return theme.negative
     default:
       return theme.positive
   }

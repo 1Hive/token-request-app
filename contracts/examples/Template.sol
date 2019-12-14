@@ -85,7 +85,7 @@ contract Template is TemplateBase {
         acl.createPermission(this, dao, dao.APP_MANAGER_ROLE(), this);
 
         bytes32 tokenRequestAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("token-request")));
-        bytes32 votingAppId = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dandelion-voting")));
+        bytes32 votingAppId = apmNamehash("dandelion-voting");
         bytes32 tokenManagerAppId = apmNamehash("token-manager");
         bytes32 vaultAppId = apmNamehash("vault");
 
