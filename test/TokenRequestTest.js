@@ -121,14 +121,14 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
     it('reverts when an accepted token is duplicated', async () => {
       await assertRevert(tokenRequest.initialize(tokenManager.address, vault.address, [mockErc20.address, mockErc20.address]),
-        'ERROR_ACCEPTED_TOKENS_MALFORMED')
+        'TOKEN_REQUEST_ACCEPTED_TOKENS_MALFORMED')
     })
 
     it('reverts when accepted tokens are not in ascending order', async () => {
       const token2 = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
       const acceptedTokens = token2.address > mockErc20.address ? [token2.address, mockErc20.address] : [mockErc20.address, token2.address]
       await assertRevert(tokenRequest.initialize(vault.address, tokenManager.address, acceptedTokens),
-        'ERROR_ACCEPTED_TOKENS_MALFORMED')
+        'TOKEN_REQUEST_ACCEPTED_TOKENS_MALFORMED')
     })
 
     it('can accept multiple accepted tokens in ascending order', async () => {
