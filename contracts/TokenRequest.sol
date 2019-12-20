@@ -69,6 +69,12 @@ contract TokenRequest is AragonApp {
         _;
     }
 
+    /**
+    * @notice Initialize TokenRequest app contract
+    * @param _tokenManager TokenManager address
+    * @param _vault Vault address
+    * @param _acceptedDepositTokens Unique list of redeemable tokens is ascending order
+    */
     function initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens) external onlyInit {
         require(isContract(_tokenManager), ERROR_ADDRESS_NOT_CONTRACT);
         require(_acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
