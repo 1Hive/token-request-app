@@ -139,8 +139,8 @@ contract Template is TemplateBase {
         vault.initialize();
         tokenManager.initialize(token, true, 0);
         address[] memory tokenList = new address[](2);
-        tokenList[0] = address(testToken);
-        tokenList[1] = address(0);
+        tokenList[0] = address(0);
+        tokenList[1] = address(testToken);
         tokenRequest.initialize(tokenManager, vault, tokenList);
         voting.initialize(token, 50 * PCT, 20 * PCT, 1 days);
     }

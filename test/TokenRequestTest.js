@@ -105,10 +105,11 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         'TOKEN_REQUEST_ADDRESS_NOT_CONTRACT'
       )
     })
+
     it('reverts when passed token list with more tokens than the max accepted', async () => {
       const maxTokens = await tokenRequest.MAX_ACCEPTED_DEPOSIT_TOKENS()
       let tokenList = []
-      for (let i = 0; i < maxTokens + 1; i++) {
+      for (let i = 0; i <= maxTokens.toNumber(); i++) {
         const token = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
         tokenList.push(token.address)
       }
@@ -117,13 +118,35 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         'TOKEN_REQUEST_TOO_MANY_ACCEPTED_TOKENS'
       )
     })
+
+    it('reverts when an accepted token is duplicated', async () => {
+      await assertRevert(tokenRequest.initialize(tokenManager.address, vault.address, [mockErc20.address, mockErc20.address]),
+        'TOKEN_REQUEST_ACCEPTED_TOKENS_MALFORMED')
+    })
+
+    it('reverts when accepted tokens are not in ascending order', async () => {
+      const token2 = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
+      const acceptedTokens = token2.address > mockErc20.address ? [token2.address, mockErc20.address] : [mockErc20.address, token2.address]
+      await assertRevert(tokenRequest.initialize(vault.address, tokenManager.address, acceptedTokens),
+        'TOKEN_REQUEST_ACCEPTED_TOKENS_MALFORMED')
+    })
+
+    it('can accept multiple accepted tokens in ascending order', async () => {
+      const token2 = await MockErc20.new(rootAccount, MOCK_TOKEN_BALANCE)
+
+      const acceptedTokens = token2.address > mockErc20.address ? [mockErc20.address, token2.address] : [token2.address, mockErc20.address]
+      await tokenRequest.initialize(vault.address, tokenManager.address, acceptedTokens)
+
+      const actualTokenAddresses = await tokenRequest.getAcceptedDepositTokens()
+      assert.deepStrictEqual(actualTokenAddresses, acceptedTokens)
+    })
   })
 
   describe('initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens)', () => {
     let acceptedDepositTokens
 
     beforeEach(async () => {
-      acceptedDepositTokens = [mockErc20.address, ETH_ADDRESS]
+      acceptedDepositTokens = [ETH_ADDRESS, mockErc20.address]
       await tokenRequest.initialize(tokenManager.address, vault.address, acceptedDepositTokens)
     })
 
@@ -187,7 +210,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
 
       it('adds ETH to acceptedDepositTokens', async () => {
         await tokenRequest.removeToken(ETH_ADDRESS, { from: accounts[1] })
-        const expectedTokens = [...acceptedDepositTokens]
+        const expectedTokens = [mockErc20.address, ETH_ADDRESS]
 
         await tokenRequest.addToken(ETH_ADDRESS, { from: accounts[1] })
 

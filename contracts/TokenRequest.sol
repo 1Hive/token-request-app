@@ -25,9 +25,10 @@ contract TokenRequest is AragonApp {
     bytes32 constant public MODIFY_TOKENS_ROLE = keccak256("MODIFY_TOKENS_ROLE");
 
     string private constant ERROR_TOO_MANY_ACCEPTED_TOKENS = "TOKEN_REQUEST_TOO_MANY_ACCEPTED_TOKENS";
+    string private constant ERROR_ADDRESS_NOT_CONTRACT = "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT";
+    string private constant ERROR_ACCEPTED_TOKENS_MALFORMED = "TOKEN_REQUEST_ACCEPTED_TOKENS_MALFORMED";
     string private constant ERROR_TOKEN_ALREADY_ACCEPTED = "TOKEN_REQUEST_TOKEN_ALREADY_ACCEPTED";
     string private constant ERROR_TOKEN_NOT_ACCEPTED = "TOKEN_REQUEST_TOKEN_NOT_ACCEPTED";
-    string private constant ERROR_ADDRESS_NOT_CONTRACT = "TOKEN_REQUEST_ADDRESS_NOT_CONTRACT";
     string private constant ERROR_NOT_OWNER = "TOKEN_REQUEST_NOT_OWNER";
     string private constant ERROR_NOT_PENDING = "TOKEN_REQUEST_NOT_PENDING";
     string private constant ERROR_ETH_VALUE_MISMATCH = "TOKEN_REQUEST_ETH_VALUE_MISMATCH";
@@ -68,6 +69,12 @@ contract TokenRequest is AragonApp {
         _;
     }
 
+    /**
+    * @notice Initialize TokenRequest app contract
+    * @param _tokenManager TokenManager address
+    * @param _vault Vault address
+    * @param _acceptedDepositTokens Unique list of redeemable tokens is ascending order
+    */
     function initialize(address _tokenManager, address _vault, address[] _acceptedDepositTokens) external onlyInit {
         require(isContract(_tokenManager), ERROR_ADDRESS_NOT_CONTRACT);
         require(_acceptedDepositTokens.length <= MAX_ACCEPTED_DEPOSIT_TOKENS, ERROR_TOO_MANY_ACCEPTED_TOKENS);
@@ -76,6 +83,9 @@ contract TokenRequest is AragonApp {
             address acceptedDepositToken = _acceptedDepositTokens[i];
             if (acceptedDepositToken != ETH) {
                 require(isContract(acceptedDepositToken), ERROR_ADDRESS_NOT_CONTRACT);
+            }
+            if (i >= 1) {
+                require(_acceptedDepositTokens[i - 1] < _acceptedDepositTokens[i], ERROR_ACCEPTED_TOKENS_MALFORMED);
             }
         }
 
