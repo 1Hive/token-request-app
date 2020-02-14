@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import styled from 'styled-components'
 import PropTypes from 'prop-types'
-import { useAragonApi } from '@aragon/api-react'
+import { useAragonApi, useGuiStyle } from '@aragon/api-react'
 import { Main, SidePanel, SyncIndicator, Tabs, Header, GU } from '@aragon/ui'
 import NewRequest from './components/Panels/NewRequest'
 import { useAppLogic } from './hooks/app-hooks'
@@ -23,6 +23,7 @@ const App = () => {
     selectRequest,
     selectedRequest,
   } = useAppLogic()
+  const { appearance } = useGuiStyle()
   const [screenIndex, setScreenIndex] = useState(0)
   const handleBack = useCallback(() => selectRequest(-1), [selectRequest])
 
@@ -62,7 +63,7 @@ const App = () => {
   }
 
   return (
-    <Main>
+    <Main theme={appearance} assetsUrl="./aragon-ui">
       <SyncIndicator visible={isSyncing} />
       <Header
         primary='Token Request'
