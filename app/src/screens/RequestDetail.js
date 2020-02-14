@@ -164,10 +164,10 @@ const RequestDetail = ({ request, token, onBack, onSubmit, onWithdraw }) => {
                           handleWithdraw(requestId)
                         }}
                       />
-                      <Info.Permissions>
+                      <Info mode="warning">
                         This request is pending, A user with permission to initiate the approval process must take
                         action. The status will not update unless it is approved or withdrawn by the requestor.
-                      </Info.Permissions>
+                      </Info>
                     </React.Fragment>
                   )
                 ) : (

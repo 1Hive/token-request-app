@@ -63,7 +63,7 @@ const App = () => {
   }
 
   return (
-    <Main theme={appearance} assetsUrl="./aragon-ui">
+    <Main theme={appearance}>
       <SyncIndicator visible={isSyncing} />
       <Header
         primary='Token Request'
