@@ -8,13 +8,13 @@ This guide will walk you through everything you need to add Token Request to an 
 
 Token Request has been published to the following locations:
 
-- Rinkeby: `token-request.open.aragonpm.eth`
-- Mainnet: -
+- Rinkeby: `token-request.aragonpm.eth`
+- Mainnet: `token-request.aragonpm.eth`
 
 To deploy to an organization you can use the [Aragon CLI](https://hack.aragon.org/docs/cli-intro.html).
 
 ```sh
-aragon dao install <dao-address> token-request.open.aragonpm.eth --app-init-args <tokens-app-address> <vault-app-address> ["'<tokenAddress1>', '<tokenAddress2>', ..."]
+aragon dao install <dao-address> token-request.aragonpm.eth --app-init-args <tokens-app-address> <vault-app-address> ["'<tokenAddress1>', '<tokenAddress2>', ..."]
 ```
 
 Token Request must have the `MINT_ROLE` permission on `Tokens app`.
@@ -44,14 +44,14 @@ vault=0x04b46b9e0c1f893cA50Cb35F096d14dD946DEf95
 
 ### 2. Install Token Request to the DAO
 
-Token Request has been published to the APM on Rinkeby at `token-request.open.aragonpm.eth`
+Token Request has been published to the APM on Rinkeby at `token-request.aragonpm.eth`
 
 ```sh
-aragon dao install $dao token-request.open.aragonpm.eth --app-init-args $tokens $vault ["'0x0000000000000000000000000000000000000000'"] --environment aragon:rinkeby
+aragon dao install $dao token-request.aragonpm.eth --app-init-args $tokens $vault ["'0x0000000000000000000000000000000000000000'"] --environment aragon:rinkeby
 ```
 
 If the installation was executed successfully, you should see in you terminal:
-`✔ Installed token-request.open.aragonpm.eth at: <token-request-address>`
+`✔ Installed token-request.aragonpm.eth at: <token-request-address>`
 
 > Note: In this example we are setting Ether as the only accepted deposit asset. If you would like to add another ERC20 Token as offered asset, you can add it to the address list or replace the ether address in case you want to support only one accepted asset.
 
