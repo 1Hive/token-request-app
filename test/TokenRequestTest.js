@@ -461,7 +461,7 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
       })
     })
 
-    describe('refundTokenRequest(uint256 _tokenRequestId) ', () => {
+    describe('refundTokenRequest(uint256 _tokenRequestId)', () => {
       const refundEthAccount = accounts[2]
       it('refund token (ERC20)', async () => {
         const refundAmount = 100
@@ -565,6 +565,14 @@ contract('TokenRequest', ([rootAccount, ...accounts]) => {
         })
 
         await assertRevert(tokenRequest.refundTokenRequest(1, { from: refundEthAccount }), 'TOKEN_REQUEST_NO_REQUEST')
+      })
+    })
+
+    describe('transferToVault(address _token)', () => {
+      it('reverts', async () => {
+        await assertRevert(
+          tokenRequest.transferToVault(mockErc20.address),
+          'RECOVER_DISALLOWED')
       })
     })
   })

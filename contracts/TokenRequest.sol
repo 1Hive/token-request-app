@@ -263,4 +263,11 @@ contract TokenRequest is AragonApp {
         return tokenManager.token();
     }
 
+    /**
+    * @dev Disable recovery escape hatch, as it could be used
+    *      maliciously to transfer funds away from TokenRequest
+    */
+    function allowRecoverability(address token) public view returns (bool) {
+        return false;
+    }
 }
