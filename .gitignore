@@ -5,6 +5,8 @@ node_modules
 .cache/
 build/
 dist/
+artifacts
+cache
 
 # Coverage
 coverage

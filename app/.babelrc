@@ -5,20 +5,15 @@
       {
         "modules": false,
         "targets": {
-          "browsers": [
-            "> 1%",
-            "last 3 versions",
-            "ie >= 9",
-            "ios >= 8",
-            "android >= 4.2"
-          ]
+          "browsers": ["> 1%", "last 3 versions", "ie >= 9", "ios >= 8", "android >= 4.2"]
         },
-        "useBuiltIns": false
+        "useBuiltIns": "entry",
+        "core-js": 3,
+        "shippedProposals": true
       }
     ]
   ],
   "plugins": [
-    "@babel/plugin-proposal-class-properties",
     [
       "styled-components",
       {
