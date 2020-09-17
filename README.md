@@ -13,7 +13,7 @@ The Token Request App should be granted the `Create Votes` permission on an inst
 
 ### Initialization
 
-The token request app is initialized by passing the address of a `token manager` instance, the address of a `_vault` instance, and an array of addresses `_acceptedDepositTokens`. The `_acceptedDepositTokens` array must be less than the `MAX_ACCEPTED_DEPOSIT_TOKENS` variable which is set to 100.
+The token request app is initialized by passing the address of a `token manager` instance, the address of a `_vault` instance, and an array of addresses `_acceptedDepositTokens`. The `_acceptedDepositTokens` array **MUST** be less than the `MAX_ACCEPTED_DEPOSIT_TOKENS` variable which is set to 100 and must be in ascending order (otherwise the installation will fail).
 
 ### Roles
 
