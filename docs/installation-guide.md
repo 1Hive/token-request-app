@@ -14,7 +14,7 @@ Token Request has been published to the following locations:
 To deploy to an organization you can use the [Aragon CLI](https://hack.aragon.org/docs/cli-intro.html).
 
 ```sh
-aragon dao install <dao-address> token-request.aragonpm.eth --app-init-args <tokens-app-address> <vault-app-address> ["'<tokenAddress1>', '<tokenAddress2>', ..."]
+aragon dao install <dao-address> token-request.aragonpm.eth --app-init-args <tokens-app-address> <vault-or-agent-app-address> ["'<tokenAddress1>', '<tokenAddress2>', ..."]
 ```
 
 Token Request must have the `MINT_ROLE` permission on `Tokens app`.
@@ -37,7 +37,7 @@ Once your Democracy DAO is deployed (the voting params don't matter as you'll be
 dao=0x6604f9fe9Db1D3F6a45d8F0ab79e8a4B05968816
 tokens=0x7F42cEB659B944cBB9F3D5ED637f66818C1bAcbf
 voting=0x41CA57d1e65Cdcd3A68A0e9f8E835F3a1FeDc655
-vault=0x04b46b9e0c1f893cA50Cb35F096d14dD946DEf95
+vault-or-agent=0x04b46b9e0c1f893cA50Cb35F096d14dD946DEf95
 ```
 
 ---
@@ -47,7 +47,7 @@ vault=0x04b46b9e0c1f893cA50Cb35F096d14dD946DEf95
 Token Request has been published to the APM on Rinkeby at `token-request.aragonpm.eth`
 
 ```sh
-aragon dao install $dao token-request.aragonpm.eth --app-init-args $tokens $vault ["'0x0000000000000000000000000000000000000000'"] --environment aragon:rinkeby
+aragon dao install $dao token-request.aragonpm.eth --app-init-args $tokens $vault-or-agent ["'0x0000000000000000000000000000000000000000'"] --environment aragon:rinkeby
 ```
 
 If the installation was executed successfully, you should see in you terminal:
