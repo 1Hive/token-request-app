@@ -111,7 +111,7 @@ dao acl create $dao $tokenRequest SET_VAULT_ROLE $voting $voting --environment a
 The Token Request must also have the `MINT_ROLE` permission on `Tokens` so that it can mint organization tokens to users in the event that a request has been approved.
 
 ```sh
-dao acl create $dao $tokens MINT_ROLE $tokenRequest $voting --environment aragon:rinkeby
+dao acl grant $dao $tokens MINT_ROLE $tokenRequest --environment aragon:rinkeby
 ```
 
 > Notes:
