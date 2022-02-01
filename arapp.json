@@ -43,7 +43,19 @@
       "appName": "token-request.aragonpm.eth",
       "wsRPC": "wss://mainnet.eth.aragon.network/ws",
       "network": "mainnet"
-    }
-  },
-  "path": "contracts/TokenRequest.sol"
+    },
+    "matic": {
+      "appName": "dandelion-org-template.open.aragonpm.eth",
+      "network": "matic",
+      "registry": "0x3c70a0190d09f34519e6e218364451add21b7d4b",
+      "wsRPC": "wss://rpc-mainnet.matic.network/ws"
+    },
+    "mumbai": {
+      "appName": "dandelion-org-template.open.aragonpm.eth",
+      "network": "mumbai",
+      "registry": "0x431f0eed904590b176f9ff8c36a1c4ff0ee9b982",
+      "wsRPC": "wss://rpc-mumbai.maticvigil.com/ws"
+    },
+    "path": "contracts/TokenRequest.sol"
+  }
 }
