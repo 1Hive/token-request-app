@@ -61,6 +61,14 @@ module.exports = {
       network_id: 4,
       provider: providerForNetwork('rinkeby'),
     },
+    matic: {
+      network_id: 5,
+      provider: providerForNetwork('matic'),
+    },
+    mombai: {
+      network_id: 6,
+      provider: providerForNetwork('rmombai'),
+    },
     coverage: {
       host: 'localhost',
       network_id: '*',
